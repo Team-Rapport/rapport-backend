@@ -1,0 +1,31 @@
+services:
+  spring:
+    image: eclipse-temurin:21-jre
+    container_name: rapport-spring
+    working_dir: /app
+    volumes:
+      - ./spring:/app
+    command: java -jar app.jar
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - rapport-net
+
+  fastapi:
+    build:
+      context: ./fastapi
+    container_name: rapport-fastapi
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - rapport-net
+
+networks:
+  rapport-net:
+    driver: bridge
