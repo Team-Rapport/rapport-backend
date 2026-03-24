@@ -1,10 +1,12 @@
 name: Deploy Spring Boot
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main ]
     paths:
       - 'spring/**'
+      - '.github/workflows/deploy-spring.yml'
 
 jobs:
   deploy:
@@ -20,7 +22,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Build with Gradle
-        working-directory: backend/spring
+        working-directory: spring
         run: ./gradlew bootJar
 
       - name: Copy JAR to EC2
@@ -29,9 +31,9 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
-          source: "backend/spring/build/libs/*.jar"
+          source: "spring/build/libs/*.jar"
           target: "/home/ubuntu/rapport/spring/app.jar"
-          strip_components: 4
+          strip_components: 3
 
       - name: Restart Spring container
         uses: appleboy/ssh-action@v1.0.3
