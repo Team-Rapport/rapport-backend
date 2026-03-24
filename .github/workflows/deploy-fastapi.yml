@@ -1,0 +1,35 @@
+name: Deploy FastAPI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/fastapi/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy FastAPI to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_KEY }}
+          source: "backend/fastapi/"
+          target: "/home/ubuntu/rapport/fastapi/"
+          strip_components: 2
+
+      - name: Rebuild & restart FastAPI container
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+            cd /home/ubuntu/rapport
+            echo "${{ secrets.ENV_FILE }}" > .env
+            docker compose up -d --build fastapi
