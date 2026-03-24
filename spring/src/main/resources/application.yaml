@@ -1,3 +1,51 @@
 spring:
   application:
     name: rapport
+
+  # 데이터소스 설정 (MySQL)
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/rapport?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8}
+    username: ${SPRING_DATASOURCE_USERNAME:rapport_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:rapport1234}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # JPA/Hibernate 설정
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: false
+    open-in-view: false
+    # DB 미연결 시에도 기동 가능하도록 설정 (로컬 개발용)
+    defer-datasource-initialization: true
+
+# 서버 포트
+server:
+  port: 8080
+
+# JWT 설정
+jwt:
+  secret: ${JWT_SECRET:rapport-local-dev-secret-key-must-be-at-least-32-characters}
+  expiration: ${JWT_EXPIRATION:86400000}  # 24시간 (밀리초)
+
+# CORS 설정
+cors:
+  allowed-origin: ${FRONTEND_ORIGIN:http://localhost:3000}
+
+# Swagger(SpringDoc) 설정
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: alpha
+
+# 로깅 레벨 설정
+logging:
+  level:
+    root: INFO
+    com.rapport: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
