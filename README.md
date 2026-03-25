@@ -127,12 +127,12 @@ curl http://localhost:8080/api/health
 ```
 main           → 프로덕션 배포 (PR + 1명 승인 필수, 직접 push 금지)
 develop        → 개발 통합 브랜치
-feature/기능명  → 기능 개발
+feat/기능명  → 기능 개발
 fix/버그명      → 버그 수정
 ```
 
 작업 흐름:
-1. `develop`에서 `feature/기능명` 브랜치 생성
+1. `develop`에서 `feat/기능명` 브랜치 생성
 2. 작업 완료 후 `develop`으로 PR
 3. 기능 통합 후 `main`으로 PR → 배포
 
