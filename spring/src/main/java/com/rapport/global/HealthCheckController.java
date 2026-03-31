@@ -15,6 +15,6 @@ public class HealthCheckController {
 
     @GetMapping("/health")
     public ApiResponse<Void> healthCheck() {
-        return ApiResponse.success("서버가 정상 동작 중입니다.");
+        return ApiResponse.ok("서버가 정상 동작 중입니다.");
     }
 }
