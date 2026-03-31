@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>상담사 심사 반려 안내</title>
+  <style>
+    body { margin: 0; padding: 0; background-color: #f5f5f5; font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; }
+    .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .header { background: linear-gradient(135deg, #64748b 0%, #475569 100%); padding: 40px 32px; text-align: center; }
+    .header h1 { color: #ffffff; font-size: 24px; margin: 0; letter-spacing: -0.5px; }
+    .header p { color: rgba(255,255,255,0.85); margin: 8px 0 0; font-size: 14px; }
+    .body { padding: 40px 32px; }
+    .greeting { font-size: 18px; font-weight: 600; color: #1f2937; margin-bottom: 16px; }
+    .message { font-size: 15px; color: #4b5563; line-height: 1.7; margin-bottom: 24px; }
+    .reason-box { background: #fff7ed; border-left: 4px solid #f97316; border-radius: 0 8px 8px 0; padding: 16px 20px; margin-bottom: 28px; }
+    .reason-box .reason-label { font-size: 13px; font-weight: 600; color: #9a3412; margin-bottom: 8px; }
+    .reason-box .reason-text { color: #431407; font-size: 14px; line-height: 1.7; margin: 0; }
+    .cta-button { display: inline-block; background: #6366f1; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
+    .cta-section { text-align: center; margin: 8px 0 32px; }
+    .info-box { background: #f0f9ff; border-radius: 8px; padding: 16px 20px; margin-bottom: 24px; }
+    .info-box p { margin: 0; font-size: 13px; color: #0369a1; line-height: 1.7; }
+    .footer { background: #f9fafb; padding: 24px 32px; border-top: 1px solid #e5e7eb; text-align: center; }
+    .footer p { font-size: 12px; color: #9ca3af; margin: 4px 0; line-height: 1.5; }
+    .badge { display: inline-block; background: #fff3f0; color: #c2410c; padding: 4px 12px; border-radius: 100px; font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>심사 결과 안내</h1>
+    <p>라포(Rapport) 상담사 심사 결과 안내</p>
+  </div>
+  <div class="body">
+    <div class="badge">❌ 심사 반려</div>
+    <div class="greeting" th:text="|안녕하세요, ${counselorName} 상담사님.|">안녕하세요, 상담사님.</div>
+    <div class="message">
+      라포 상담사 심사 결과를 안내해 드립니다.<br/>
+      아쉽게도 이번 심사에서 <strong>반려</strong> 처리되었습니다.
+    </div>
+
+    <div class="reason-box">
+      <div class="reason-label">📋 반려 사유</div>
+      <p class="reason-text" th:text="${reason}">반려 사유가 여기에 표시됩니다.</p>
+    </div>
+
+    <div class="info-box">
+      <p>
+        💡 반려 사유를 확인하신 후, 보완 자료를 준비하여 재신청하실 수 있습니다.<br/>
+        추가 문의 사항은 라포 고객센터를 이용해 주세요.
+      </p>
+    </div>
+
+    <div class="cta-section">
+      <a class="cta-button" th:href="${reapplyUrl}" href="#">재신청하기</a>
+    </div>
+
+    <div class="message" style="font-size:13px; color:#6b7280;">
+      더 좋은 서비스로 다시 만나뵙기를 기대합니다.<br/>
+      감사합니다.
+    </div>
+  </div>
+  <div class="footer">
+    <p>본 메일은 발신 전용이며 회신되지 않습니다.</p>
+    <p>© 2026 Rapport. All rights reserved.</p>
+  </div>
+</div>
+</body>
+</html>
