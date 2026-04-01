@@ -102,6 +102,7 @@ public class CounselorProfile {
         profile.licenseNumber = licenseNumber;
         profile.counselorGender = gender;
         profile.averageRating = BigDecimal.ZERO;
+        profile.specializations = List.of();
         return profile;
     }
 
