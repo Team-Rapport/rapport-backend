@@ -85,7 +85,7 @@ jwt:
 
 # ── 신규: 앱 공통 설정 ────────────────────────────────────────
 app:
-  frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  frontend-origin: ${FRONTEND_ORIGIN:http://localhost:5173}
   mail:
     from: ${MAIL_FROM:noreply@rapport.kr}
     from-name: "라포(Rapport)"
@@ -110,3 +110,14 @@ logging:
     com.rapport: DEBUG
     org.springframework.security: DEBUG
     org.hibernate.SQL: DEBUG
+
+# AWS S3 설정
+cloud:
+  aws:
+    credentials:
+      access-key: ${AWS_ACCESS_KEY_ID}
+      secret-key: ${AWS_SECRET_ACCESS_KEY}
+    s3:
+      bucket: ${AWS_S3_BUCKET}
+    region:
+      static: ${AWS_REGION}

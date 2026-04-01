@@ -26,7 +26,7 @@ public class EmailService {
     @Value("${app.mail.from-name}")
     private String fromName;
 
-    @Value("${app.frontend-url}")
+    @Value("${app.frontend-origin}")
     private String frontendUrl;
 
     // ===== 상담사 승인 이메일 =====

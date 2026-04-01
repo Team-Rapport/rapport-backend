@@ -15,7 +15,7 @@ import java.io.IOException;
 @Component
 public class OAuth2AuthenticationFailureHandler extends SimpleUrlAuthenticationFailureHandler {
 
-    @Value("${app.frontend-url}")
+    @Value("${app.frontend-origin}")
     private String frontendUrl;
 
     @Override
