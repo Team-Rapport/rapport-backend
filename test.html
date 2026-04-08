@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>라포 AI 챗봇 테스트</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
+    max-width: 720px;
+    margin: 24px auto;
+    padding: 0 16px;
+    background: #f7f7f9;
+    color: #222;
+  }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .sub { color: #888; font-size: 13px; margin-bottom: 16px; }
+
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .row > * { flex-shrink: 0; }
+
+  label { font-size: 13px; color: #555; }
+  input[type=text] {
+    flex: 1;
+    min-width: 200px;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+  button {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    background: #4a6cf7;
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  button:hover { background: #3b58d6; }
+  button:disabled { background: #bbb; cursor: not-allowed; }
+  button.secondary { background: #6c757d; }
+  button.danger { background: #dc3545; }
+
+  #session-info {
+    font-size: 12px;
+    color: #666;
+    word-break: break-all;
+    margin-top: 8px;
+  }
+
+  #chat-log {
+    height: 360px;
+    overflow-y: auto;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 12px;
+    background: #fafafa;
+    margin-bottom: 12px;
+  }
+  .msg { margin-bottom: 10px; max-width: 85%; }
+  .msg.user { margin-left: auto; text-align: right; }
+  .msg .bubble {
+    display: inline-block;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.4;
+    text-align: left;
+  }
+  .msg.user .bubble { background: #4a6cf7; color: #fff; }
+  .msg.ai .bubble { background: #fff; border: 1px solid #e5e5e5; }
+  .msg .role { font-size: 11px; color: #999; margin-bottom: 2px; }
+
+  pre {
+    background: #1e1e2e;
+    color: #d4d4d4;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .scores { display: flex; gap: 12px; margin: 12px 0; }
+  .score-box {
+    flex: 1;
+    background: #f0f3ff;
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+  }
+  .score-box .label { font-size: 12px; color: #666; }
+  .score-box .value { font-size: 24px; font-weight: bold; color: #4a6cf7; }
+
+  .risk {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: bold;
+    color: #fff;
+  }
+  .risk.LOW { background: #28a745; }
+  .risk.MODERATE { background: #ffc107; color: #333; }
+  .risk.HIGH { background: #fd7e14; }
+  .risk.CRITICAL { background: #dc3545; }
+
+  .crisis-alert {
+    background: #ffe5e5;
+    border-left: 4px solid #dc3545;
+    padding: 10px 12px;
+    border-radius: 6px;
+    color: #a02020;
+    font-size: 13px;
+    margin: 10px 0;
+  }
+
+  .tag {
+    display: inline-block;
+    background: #e9ecef;
+    color: #495057;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    margin: 2px 4px 2px 0;
+  }
+
+  .err { color: #dc3545; font-size: 13px; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<h1>🧠 라포 AI 챗봇 테스트</h1>
+<p class="sub">FastAPI 서버 (localhost:8000) 점수 산출 알고리즘 테스트용</p>
+
+<!-- ===== 서버 설정 ===== -->
+<div class="card">
+  <div class="row">
+    <label>서버 URL:</label>
+    <input type="text" id="server-url" value="http://localhost:8000">
+    <button onclick="checkHealth()">Health Check</button>
+  </div>
+  <div id="health-status" class="sub" style="margin-top:8px;"></div>
+</div>
+
+<!-- ===== 세션 관리 ===== -->
+<div class="card">
+  <div class="row">
+    <button onclick="createSession()">1. 세션 생성</button>
+    <button class="danger" onclick="finalize()" id="btn-finalize" disabled>3. Finalize (리포트 생성)</button>
+    <button class="secondary" onclick="resetAll()">초기화</button>
+  </div>
+  <div id="session-info"></div>
+</div>
+
+<!-- ===== 채팅 ===== -->
+<div class="card">
+  <div id="chat-log"></div>
+  <div class="row">
+    <input type="text" id="msg-input" placeholder="메시지 입력 후 Enter" disabled>
+    <button onclick="sendMessage()" id="btn-send" disabled>전송</button>
+  </div>
+  <div id="chat-error" class="err"></div>
+</div>
+
+<!-- ===== 빠른 테스트 시나리오 ===== -->
+<div class="card">
+  <div style="font-size:13px; color:#555; margin-bottom:8px;">📝 빠른 테스트 시나리오 (한 번 클릭하면 자동으로 메시지 전송)</div>
+  <div class="row">
+    <button class="secondary" onclick="runScenario('mild')">가벼운 스트레스</button>
+    <button class="secondary" onclick="runScenario('moderate')">중등도 우울</button>
+    <button class="secondary" onclick="runScenario('crisis')">위기 신호</button>
+  </div>
+</div>
+
+<!-- ===== 리포트 결과 ===== -->
+<div class="card" id="report-card" style="display:none;">
+  <h3 style="margin-top:0;">📊 리포트 결과</h3>
+  <div id="report-content"></div>
+  <details style="margin-top:12px;">
+    <summary style="cursor:pointer; font-size:13px; color:#666;">Raw JSON 보기</summary>
+    <pre id="report-raw"></pre>
+  </details>
+</div>
+
+<script>
+let sessionId = null;
+const userId = 1;
+
+function getServerUrl() {
+  return document.getElementById('server-url').value.replace(/\/$/, '');
+}
+
+async function checkHealth() {
+  const el = document.getElementById('health-status');
+  el.textContent = '확인 중...';
+  try {
+    const res = await fetch(getServerUrl() + '/ai/health');
+    const data = await res.json();
+    el.textContent = '✅ 서버 정상: ' + JSON.stringify(data);
+    el.style.color = '#28a745';
+  } catch (e) {
+    el.textContent = '❌ 서버 연결 실패: ' + e.message;
+    el.style.color = '#dc3545';
+  }
+}
+
+async function createSession() {
+  try {
+    const res = await fetch(getServerUrl() + '/ai/session', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({consent: true, user_id: userId}),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    sessionId = data.session_id;
+    document.getElementById('session-info').textContent = '세션 ID: ' + sessionId;
+    document.getElementById('msg-input').disabled = false;
+    document.getElementById('btn-send').disabled = false;
+    document.getElementById('btn-finalize').disabled = false;
+    document.getElementById('chat-log').innerHTML = '';
+    document.getElementById('chat-error').textContent = '';
+    document.getElementById('report-card').style.display = 'none';
+  } catch (e) {
+    document.getElementById('chat-error').textContent = '세션 생성 실패: ' + e.message;
+  }
+}
+
+function appendMessage(role, content) {
+  const log = document.getElementById('chat-log');
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  div.innerHTML = `<div class="role">${role === 'user' ? '나' : '라포'}</div><div class="bubble"></div>`;
+  div.querySelector('.bubble').textContent = content;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+async function sendMessage(forcedText) {
+  const input = document.getElementById('msg-input');
+  const text = forcedText || input.value.trim();
+  if (!text || !sessionId) return;
+
+  appendMessage('user', text);
+  input.value = '';
+  document.getElementById('btn-send').disabled = true;
+  document.getElementById('chat-error').textContent = '';
+
+  try {
+    const res = await fetch(getServerUrl() + '/ai/message', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({session_id: sessionId, user_id: userId, message: text}),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status + ' — ' + await res.text());
+    const data = await res.json();
+    appendMessage('ai', data.reply);
+  } catch (e) {
+    document.getElementById('chat-error').textContent = '메시지 전송 실패: ' + e.message;
+  } finally {
+    document.getElementById('btn-send').disabled = false;
+  }
+}
+
+async function finalize() {
+  if (!sessionId) return;
+  document.getElementById('btn-finalize').disabled = true;
+  document.getElementById('chat-error').textContent = '리포트 생성 중... (LLM 호출 약 3~5초 소요)';
+
+  try {
+    const res = await fetch(getServerUrl() + '/ai/finalize', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({session_id: sessionId, user_id: userId}),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status + ' — ' + await res.text());
+    const data = await res.json();
+    renderReport(data);
+    document.getElementById('chat-error').textContent = '';
+  } catch (e) {
+    document.getElementById('chat-error').textContent = 'finalize 실패: ' + e.message;
+    document.getElementById('btn-finalize').disabled = false;
+  }
+}
+
+function renderReport(data) {
+  document.getElementById('report-card').style.display = 'block';
+  document.getElementById('report-raw').textContent = JSON.stringify(data, null, 2);
+
+  const dep = data.depression_score ?? data.scores?.depression ?? 0;
+  const anx = data.anxiety_score ?? data.scores?.anxiety ?? 0;
+  const str = data.stress_score ?? data.scores?.stress ?? 0;
+  const risk = data.risk_level ?? 'LOW';
+  const isCrisis = data.is_crisis ?? false;
+  const topics = data.topics ?? [];
+  const recs = data.recommended_specializations ?? [];
+
+  let html = '';
+
+  if (isCrisis) {
+    html += `<div class="crisis-alert">⚠️ 위기 신호가 감지되었습니다. 자살예방상담전화 1393, 정신건강상담전화 1577-0199</div>`;
+  }
+
+  html += `
+    <div class="scores">
+      <div class="score-box"><div class="label">우울</div><div class="value">${dep}</div></div>
+      <div class="score-box"><div class="label">불안</div><div class="value">${anx}</div></div>
+      <div class="score-box"><div class="label">스트레스</div><div class="value">${str}</div></div>
+    </div>
+    <div style="margin:8px 0;"><strong>위험도:</strong> <span class="risk ${risk}">${risk}</span></div>
+  `;
+
+  if (topics.length) {
+    html += `<div style="margin:8px 0;"><strong>토픽:</strong> ${topics.map(t => `<span class="tag">${t}</span>`).join('')}</div>`;
+  }
+  if (recs.length) {
+    html += `<div style="margin:8px 0;"><strong>추천 전문분야:</strong> ${recs.map(r => `<span class="tag">${r}</span>`).join('')}</div>`;
+  }
+
+  document.getElementById('report-content').innerHTML = html;
+  document.getElementById('report-card').scrollIntoView({behavior: 'smooth'});
+}
+
+function resetAll() {
+  sessionId = null;
+  document.getElementById('session-info').textContent = '';
+  document.getElementById('chat-log').innerHTML = '';
+  document.getElementById('chat-error').textContent = '';
+  document.getElementById('msg-input').value = '';
+  document.getElementById('msg-input').disabled = true;
+  document.getElementById('btn-send').disabled = true;
+  document.getElementById('btn-finalize').disabled = true;
+  document.getElementById('report-card').style.display = 'none';
+}
+
+// ===== 빠른 시나리오 =====
+const SCENARIOS = {
+  mild: [
+    '요즘 회사 일이 너무 바빠서 정신이 없어요',
+    '잠도 잘 못 자고 짜증이 자주 나는 편이에요',
+    '주말에도 일 생각이 나서 푹 쉬지 못해요',
+  ],
+  moderate: [
+    '몇 주째 매일 우울하고 무기력해요',
+    '아무것도 하기 싫고 외로워요',
+    '불안해서 잠도 못 자고 가슴이 답답해요',
+    '제가 쓸모없는 사람 같다는 생각이 들어요',
+  ],
+  crisis: [
+    '요즘 살기가 너무 힘들어요',
+    '죽고 싶다는 생각이 자주 들어요',
+    '살 이유가 없는 것 같아요',
+  ],
+};
+
+async function runScenario(name) {
+  if (!sessionId) {
+    await createSession();
+  }
+  const messages = SCENARIOS[name];
+  for (const msg of messages) {
+    await sendMessage(msg);
+    await new Promise(r => setTimeout(r, 800));
+  }
+}
+
+// Enter 키로 전송
+document.getElementById('msg-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendMessage();
+});
+
+// 페이지 로드 시 자동 health check
+window.addEventListener('load', checkHealth);
+</script>
+
+</body>
+</html>
