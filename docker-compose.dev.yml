@@ -17,6 +17,16 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: rapport-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+
   fastapi:
     build:
       context: ./fastapi
@@ -34,3 +44,4 @@ services:
 
 volumes:
   mysql-dev-data:
+  redis-data:
