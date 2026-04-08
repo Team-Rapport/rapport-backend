@@ -108,4 +108,11 @@ public class CounselorApprovalService {
                 .appliedAt(profile.getCreatedAt())
                 .build();
     }
+
+    @Transactional
+    public void reapply(Long counselorUserId) {
+        CounselorProfile profile = findProfileOrThrow(counselorUserId);
+        profile.reapply();
+        log.info("Counselor reapplied: userId={}", counselorUserId);
+    }
 }

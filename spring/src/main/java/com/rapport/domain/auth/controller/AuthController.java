@@ -69,4 +69,11 @@ public class AuthController {
                 .build();
         return ResponseEntity.ok(ApiResponse.ok(userInfo));
     }
+
+    @Operation(summary = "이메일 로그인 (상담사)")
+    @PostMapping("/login")
+    public ResponseEntity<ApiResponse<AuthDto.TokenResponse>> login(
+            @Valid @RequestBody AuthDto.LoginRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok("로그인 성공", authService.login(request)));
+    }
 }

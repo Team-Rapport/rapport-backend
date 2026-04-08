@@ -63,4 +63,14 @@ public class AuthDto {
         private String role;
         private String profileImageUrl;
     }
+
+    @Getter
+    public static class LoginRequest {
+        @NotBlank
+        @Email
+        private String email;
+
+        @NotBlank
+        private String password;
+    }
 }

@@ -45,7 +45,6 @@ public class CounselorProfile {
     @Column(columnDefinition = "TEXT")
     private String bio;
 
-    // 방금 발생한 에러 해결: TINYINT UNSIGNED 명시
     @Column(name = "experience_years", columnDefinition = "TINYINT UNSIGNED")
     private Integer experienceYears;
 
@@ -62,15 +61,12 @@ public class CounselorProfile {
     @Column(name = "approved_at")
     private LocalDateTime approvedAt;
 
-    // Flyway boolean(TINYINT) 충돌 방지
     @Column(name = "is_verified", nullable = false, columnDefinition = "TINYINT(1)")
     private boolean isVerified = false;
 
-    // 평점 소수점 타입 맞춤
     @Column(name = "average_rating", columnDefinition = "DECIMAL(3,2)")
     private BigDecimal averageRating;
 
-    // 리뷰 카운트도 UNSIGNED INT 등에서 충돌날 가능성 방지용 컬럼 정의
     @Column(name = "review_count", nullable = false, columnDefinition = "INT DEFAULT 0")
     private int reviewCount = 0;
 
@@ -125,6 +121,20 @@ public class CounselorProfile {
         this.rejectionReason = reason;
     }
 
+    public void update(String licenseType, String licenseNumber,
+                       CounselorGender counselorGender, List<String> specializations,
+                       List<String> approaches, String bio,
+                       Integer experienceYears, String officeAddress) {
+        if (licenseType != null)      this.licenseType = licenseType;
+        if (licenseNumber != null)    this.licenseNumber = licenseNumber;
+        if (counselorGender != null)  this.counselorGender = counselorGender;
+        if (specializations != null)  this.specializations = specializations;
+        if (approaches != null)       this.approaches = approaches;
+        if (bio != null)              this.bio = bio;
+        if (experienceYears != null)  this.experienceYears = experienceYears;
+        if (officeAddress != null)    this.officeAddress = officeAddress;
+    }
+
     public boolean isPending() {
         return approvalStatus == ApprovalStatus.PENDING;
     }
@@ -139,5 +149,13 @@ public class CounselorProfile {
 
     public enum CounselorGender {
         MALE, FEMALE, ANY
+    }
+
+    public void reapply() {
+        if (this.approvalStatus != ApprovalStatus.REJECTED) {
+            throw new IllegalStateException("반려된 상태에서만 재신청할 수 있습니다.");
+        }
+        this.approvalStatus = ApprovalStatus.PENDING;
+        this.rejectionReason = null;
     }
 }
