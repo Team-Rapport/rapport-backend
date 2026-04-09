@@ -221,7 +221,6 @@ def analyze_messages(user_messages: List[str]) -> Dict:
     depression = _score_category(full_text, DEPRESSION_KEYWORDS)
     anxiety = _score_category(full_text, ANXIETY_KEYWORDS)
     stress = _score_category(full_text, STRESS_KEYWORDS)
-
     topics = _extract_topics(full_text)
     is_crisis = _detect_crisis(full_text)
     risk_level = _calculate_risk_level(depression, anxiety, stress, is_crisis)
