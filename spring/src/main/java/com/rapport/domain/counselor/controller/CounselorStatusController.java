@@ -17,6 +17,10 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.rapport.domain.counselor.service.CounselorApprovalService;
+import io.swagger.v3.oas.annotations.Operation;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.PostMapping;
 
 @Tag(name = "Counselor", description = "상담사 전용 API")
 @RestController
@@ -26,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class CounselorStatusController {
 
     private final CounselorProfileRepository counselorProfileRepository;
+    private final CounselorApprovalService counselorApprovalService;
 
     /**
      * 내 심사 상태 조회 — 프론트에서 PENDING/REJECTED/APPROVED 화면 분기에 사용
@@ -48,6 +53,14 @@ public class CounselorStatusController {
 
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
+    @Operation(summary = "상담사 심사 재신청", description = "REJECTED → PENDING으로 변경")
+    @PostMapping("/reapply")
+    @PreAuthorize("hasRole('COUNSELOR')")
+    public ResponseEntity<ApiResponse<Void>> reapply(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        counselorApprovalService.reapply(principal.getId());
+        return ResponseEntity.ok(ApiResponse.ok("재신청이 완료되었습니다. 관리자 심사를 기다려주세요."));
+    }
 
     @Getter
     @Builder
@@ -56,4 +69,5 @@ public class CounselorStatusController {
         private String rejectionReason;
         private String approvedAt;
     }
+
 }

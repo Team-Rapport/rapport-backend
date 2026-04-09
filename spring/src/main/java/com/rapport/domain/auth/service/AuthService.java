@@ -116,4 +116,21 @@ public class AuthService {
                         .build())
                 .build();
     }
+
+    @Transactional
+    public AuthDto.TokenResponse login(AuthDto.LoginRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+            throw new BusinessException(ErrorCode.INVALID_PASSWORD);
+        }
+
+        if (!user.isActive()) {
+            throw new BusinessException(ErrorCode.ACCOUNT_DISABLED);
+        }
+
+        user.updateLastLoginAt();
+        return issueTokens(user);
+    }
 }
