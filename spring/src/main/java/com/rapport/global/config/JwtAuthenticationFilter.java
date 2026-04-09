@@ -1,45 +1,62 @@
 package com.rapport.global.config;
 
+import com.rapport.domain.user.entity.User;
+import com.rapport.domain.user.entity.UserRepository;
+import com.rapport.global.exception.BusinessException;
+import com.rapport.global.util.JwtTokenProvider;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-/**
- * JWT 인증 필터
- * 매 요청마다 Authorization 헤더에서 JWT 토큰을 추출하고 검증합니다.
- * 실제 토큰 파싱 로직은 auth 도메인 구현 시 완성할 예정입니다.
- */
 @Slf4j
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private final JwtTokenProvider jwtTokenProvider;
+    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
+        String token = resolveToken(request);
 
-        // TODO: Authorization 헤더에서 Bearer 토큰 추출
-        // String authHeader = request.getHeader("Authorization");
-        // if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-        //     filterChain.doFilter(request, response);
-        //     return;
-        // }
-        // String token = authHeader.substring(7);
+        if (StringUtils.hasText(token)) {
+            try {
+                jwtTokenProvider.validateToken(token);
+                Long userId = jwtTokenProvider.getUserId(token);
 
-        // TODO: JwtTokenProvider를 통해 토큰 유효성 검증
-        // if (jwtTokenProvider.validateToken(token)) {
-
-        //     TODO: 토큰에서 사용자 정보 추출 후 SecurityContext에 인증 정보 저장
-        //     Authentication authentication = jwtTokenProvider.getAuthentication(token);
-        //     SecurityContextHolder.getContext().setAuthentication(authentication);
-        // }
+                User user = userRepository.findById(userId).orElse(null);
+                if (user != null && user.isActive()) {
+                    UserPrincipal principal = new UserPrincipal(user);
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(
+                                    principal, null, principal.getAuthorities());
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
+            } catch (BusinessException e) {
+                log.warn("JWT validation failed: {}", e.getMessage());
+                // SecurityContext를 비워두면 anonymous로 처리
+            }
+        }
 
         filterChain.doFilter(request, response);
+    }
+
+    private String resolveToken(HttpServletRequest request) {
+        String bearerToken = request.getHeader("Authorization");
+        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+        return null;
     }
 }
