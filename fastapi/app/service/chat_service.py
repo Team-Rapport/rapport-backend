@@ -29,6 +29,11 @@ def _session_key(session_id: str) -> str:
 # ──────────────────────────────────────────────
 # 위험 키워드 (실시간 감지용 — analyzer.py RISK_PATTERNS와 동기화)
 # ──────────────────────────────────────────────
+INITIAL_GREETING = (
+    "저는 AI 챗봇 라포예요. 전문 상담 전에 마음 상태를 가볍게 점검해보는 시간이에요. "
+    "요즘 가장 고민되는 일이 있나요?"
+)
+
 CRISIS_KEYWORDS = [
     "죽고 싶", "죽을래", "죽고싶", "자살", "자해",
     "생을 마감", "해치고 싶", "폭력 충동",
@@ -206,9 +211,11 @@ def _detect_crisis(message: str) -> bool:
 # 공개 API
 # ──────────────────────────────────────────────
 
-async def create_session(session_id: str) -> None:
-    """새 대화 세션을 생성한다 (빈 이력으로 초기화, TTL 7200초)."""
-    await _save_messages(session_id, [])
+async def create_session(session_id: str) -> str:
+    """새 대화 세션을 생성하고 AI 첫 인삿말을 저장한다. 인삿말 문자열을 반환한다."""
+    initial_messages = [{"role": "assistant", "content": INITIAL_GREETING}]
+    await _save_messages(session_id, initial_messages)
+    return INITIAL_GREETING
 
 
 async def chat(session_id: str, message: str) -> dict:

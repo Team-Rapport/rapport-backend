@@ -18,8 +18,8 @@ async def create_session(req: SessionCreateRequest):
             detail="AI 사전 점검에 동의해야 세션을 시작할 수 있습니다.",
         )
     session_id = str(uuid.uuid4())
-    await chat_service.create_session(session_id)
-    return {"session_id": session_id}
+    initial_message = await chat_service.create_session(session_id)
+    return {"session_id": session_id, "initial_message": initial_message}
 
 
 @router.post("/message", response_model=ChatResponse)
