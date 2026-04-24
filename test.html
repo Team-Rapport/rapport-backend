@@ -230,6 +230,7 @@ async function createSession() {
     document.getElementById('btn-send').disabled = false;
     document.getElementById('btn-finalize').disabled = false;
     document.getElementById('chat-log').innerHTML = '';
+    if (data.initial_message) appendMessage('ai', data.initial_message);
     document.getElementById('chat-error').textContent = '';
     document.getElementById('report-card').style.display = 'none';
   } catch (e) {
