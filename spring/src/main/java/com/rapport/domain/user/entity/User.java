@@ -105,4 +105,10 @@ public class User {
     public enum Role {
         CLIENT, COUNSELOR, ADMIN
     }
+
+    public void updateName(String name) {
+        if (name != null && !name.isBlank()) {
+            this.name = name;
+        }
+    }
 }
