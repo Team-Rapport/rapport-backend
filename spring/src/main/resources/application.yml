@@ -111,6 +111,11 @@ logging:
     org.springframework.security: DEBUG
     org.hibernate.SQL: DEBUG
 
+  logging:
+    level:
+      org.hibernate.SQL: DEBUG
+      org.hibernate.orm.jdbc.bind: TRACE
+
 # AWS S3 설정
 cloud:
   aws:
@@ -121,3 +126,4 @@ cloud:
       bucket: ${AWS_S3_BUCKET}
     region:
       static: ${AWS_REGION}
+
