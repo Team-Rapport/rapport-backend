@@ -1,8 +1,12 @@
 import json
+import logging
 from openai import AsyncOpenAI
 from redis.asyncio import Redis
+import httpx
 from app.core.config import settings
 from typing import List
+
+logger = logging.getLogger(__name__)
 
 client = AsyncOpenAI(api_key=settings.openai_api_key)
 
@@ -284,14 +288,47 @@ async def chat(session_id: str, message: str) -> dict:
     }
 
 
-async def finalize(session_id: str) -> dict:
+async def _post_report_to_spring(spring_session_id: int, user_id: int, scores: dict) -> None:
+    payload = {
+        "userId": user_id,
+        "sessionId": spring_session_id,
+        "depressionScore": scores["depression_score"],
+        "anxietyScore": scores["anxiety_score"],
+        "stressScore": scores["stress_score"],
+        "riskLevel": scores["risk_level"],
+        "summary": scores.get("summary"),
+        "reportKeywords": scores["topics"],
+        "recommendedSpecializations": scores["recommended_specializations"],
+        "isCrisisDetected": scores["is_crisis"],
+    }
+    async with httpx.AsyncClient() as http:
+        response = await http.post(
+            f"{settings.spring_base_url}/api/v1/reports/internal",
+            json=payload,
+            headers={"X-Service-Key": settings.internal_service_key},
+            timeout=10.0,
+        )
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            if 400 <= e.response.status_code < 500:
+                raise ValueError(
+                    f"리포트 저장 실패 (Spring {e.response.status_code}): {e.response.text}"
+                ) from e
+            raise
+        logger.info("Report saved to Spring: session_id=%s, risk=%s", spring_session_id, scores["risk_level"])
+
+
+async def finalize(session_id: str, spring_session_id: int, user_id: int) -> dict:
     """
-    세션 종료 시 호출. 사용자 발화 전체를 분석해 최종 리포트 데이터를 생성한다.
+    세션 종료 시 호출. 사용자 발화 전체를 분석해 최종 리포트 데이터를 생성하고
+    Spring에 저장한다.
 
     파이프라인은 report_service에 위임:
     1. analyzer (키워드/룰 기반 1차 점수 + 위기 감지)
     2. GPT-4o (맥락 기반 2차 점수)
     3. 가중평균 융합 (키워드 0.4 + LLM 0.6)
+    4. Spring POST /api/v1/reports/internal 호출로 DB 저장
     """
     messages = await _load_messages(session_id)
     user_messages = [m["content"] for m in messages if m["role"] == "user"]
@@ -299,5 +336,6 @@ async def finalize(session_id: str) -> dict:
     from app.service.report_service import generate_scores
     result = await generate_scores(user_messages)
 
+    await _post_report_to_spring(spring_session_id, user_id, result)
     await _get_redis().delete(_session_key(session_id))
     return result

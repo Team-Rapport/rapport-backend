@@ -16,6 +16,7 @@ class ChatRequest(BaseModel):
 
 class FinalizeRequest(BaseModel):
     session_id: str
+    spring_session_id: int  # Spring DB ai_chat_sessions.id
     user_id: int
 
 # ============================================================
