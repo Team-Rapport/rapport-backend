@@ -37,7 +37,8 @@ public class ReportDto {
         private String summary;
         private List<String> reportKeywords;
         private List<String> recommendedSpecializations;
-        private boolean isCrisisDetected;
+        @JsonProperty("isCrisisDetected")
+        private boolean crisisDetected;
     }
 
     // 리포트 목록 (카드용 요약)
@@ -50,7 +51,8 @@ public class ReportDto {
         private Integer anxietyScore;
         private Integer stressScore;
         private Report.RiskLevel riskLevel;
-        private boolean isCrisisDetected;
+        @JsonProperty("isCrisisDetected")
+        private boolean crisisDetected;
         private LocalDateTime createdAt;
     }
 
@@ -67,7 +69,8 @@ public class ReportDto {
         private String summary;
         private List<String> reportKeywords;
         private List<String> recommendedSpecializations;
-        private boolean isCrisisDetected;
+        @JsonProperty("isCrisisDetected")
+        private boolean crisisDetected;
         private LocalDateTime createdAt;
     }
 }

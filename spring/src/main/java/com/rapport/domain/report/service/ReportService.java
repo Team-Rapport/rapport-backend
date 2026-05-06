@@ -118,7 +118,7 @@ public class ReportService {
                 .anxietyScore(r.getAnxietyScore())
                 .stressScore(r.getStressScore())
                 .riskLevel(r.getRiskLevel())
-                .isCrisisDetected(r.isCrisisDetected())
+                .crisisDetected(r.isCrisisDetected())
                 .createdAt(r.getCreatedAt())
                 .build();
     }
@@ -134,7 +134,7 @@ public class ReportService {
                 .summary(r.getSummary())
                 .reportKeywords(r.getReportKeywords())
                 .recommendedSpecializations(r.getRecommendedSpecializations())
-                .isCrisisDetected(r.isCrisisDetected())
+                .crisisDetected(r.isCrisisDetected())
                 .createdAt(r.getCreatedAt())
                 .build();
     }
