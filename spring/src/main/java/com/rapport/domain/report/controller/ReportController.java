@@ -9,13 +9,16 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 @Tag(name = "Report", description = "AI 사전 점검 리포트 API")
 @RestController
@@ -25,6 +28,21 @@ import org.springframework.web.bind.annotation.*;
 public class ReportController {
 
     private final ReportService reportService;
+
+    @Value("${app.internal-service-key}")
+    private String internalServiceKey;
+
+    @Operation(summary = "FastAPI 내부 호출: 리포트 저장", description = "X-Service-Key 헤더로 인증. JWT 불필요.")
+    @PostMapping("/internal")
+    public ResponseEntity<ApiResponse<ReportDto.ReportDetail>> saveReportInternal(
+            @RequestHeader("X-Service-Key") String serviceKey,
+            @Valid @RequestBody ReportDto.InternalSaveRequest request) {
+        if (!internalServiceKey.equals(serviceKey)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid service key");
+        }
+        return ResponseEntity.ok(ApiResponse.ok("리포트가 저장되었습니다.",
+                reportService.saveReportInternal(request)));
+    }
 
     @Operation(summary = "리포트 저장", description = "FastAPI에서 분석 완료 후 호출. 세션도 자동 완료 처리됩니다.")
     @PostMapping

@@ -43,7 +43,9 @@ public class SecurityConfig {
             "/swagger-ui/**",
             "/swagger-ui.html",
             "/api/v1/auth/login",
-            "/v3/api-docs/**"
+            "/v3/api-docs/**",
+            "/ws/**",   // WebSocket handshake (JWT 인증은 StompChannelInterceptor에서 처리)
+            "/api/v1/reports/internal"  // FastAPI 서버 내부 호출용 (X-Service-Key로 인증)
     };
 
     @Bean

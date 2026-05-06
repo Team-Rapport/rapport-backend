@@ -25,7 +25,36 @@ public class ReportService {
     private final AiChatSessionRepository sessionRepository;
     private final UserRepository userRepository;
 
-    // ===== 리포트 저장 (FastAPI 호출용) =====
+    // ===== 리포트 저장 (FastAPI 내부 호출용 — X-Service-Key 인증) =====
+    @Transactional
+    public ReportDto.ReportDetail saveReportInternal(ReportDto.InternalSaveRequest request) {
+        AiChatSession session = sessionRepository.findByIdAndClientId(
+                        request.getSessionId(), request.getUserId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+
+        if (reportRepository.existsBySessionId(session.getId())) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE, "이미 리포트가 생성된 세션입니다.");
+        }
+
+        User client = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        Report report = Report.create(
+                session, client,
+                request.getDepressionScore(), request.getAnxietyScore(), request.getStressScore(),
+                request.getRiskLevel(), request.getSummary(),
+                request.getReportKeywords(), request.getRecommendedSpecializations(),
+                request.isCrisisDetected()
+        );
+        reportRepository.save(report);
+        session.complete();
+
+        log.info("Report saved (internal): reportId={}, clientId={}, riskLevel={}",
+                report.getId(), request.getUserId(), report.getRiskLevel());
+        return toDetail(report);
+    }
+
+    // ===== 리포트 저장 (JWT 인증 — 기존 엔드포인트) =====
     @Transactional
     public ReportDto.ReportDetail saveReport(Long clientId, ReportDto.SaveRequest request) {
         AiChatSession session = sessionRepository.findByIdAndClientId(
