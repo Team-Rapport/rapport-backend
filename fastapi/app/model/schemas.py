@@ -11,7 +11,6 @@ class SessionCreateRequest(BaseModel):
 
 class ChatRequest(BaseModel):
     session_id: str
-    user_id: int
     message: str
 
 class FinalizeRequest(BaseModel):
