@@ -60,6 +60,12 @@ public class ChatMessageDto {
         }
     }
 
+    /** 채팅방 생성 요청 */
+    @Getter
+    public static class CreateRoomRequest {
+        private Long counselorId;
+    }
+
     /** 메시지 히스토리 조회 응답 */
     @Getter
     public static class HistoryResponse {

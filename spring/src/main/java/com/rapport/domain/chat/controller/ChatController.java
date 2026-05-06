@@ -45,6 +45,19 @@ public class ChatController {
     }
 
     // ──────────────────────────────────────────────
+    // REST: 채팅방 생성
+    // POST /api/v1/chat/rooms
+    // ──────────────────────────────────────────────
+
+    @PostMapping("/api/v1/chat/rooms")
+    public ApiResponse<ChatMessageDto.RoomResponse> createRoom(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestBody ChatMessageDto.CreateRoomRequest request) {
+        return ApiResponse.ok(chatService.createRoom(
+                principal.getId(), request.getCounselorId(), null));
+    }
+
+    // ──────────────────────────────────────────────
     // REST: 채팅방 목록 조회
     // GET /api/v1/chat/rooms
     // ──────────────────────────────────────────────
