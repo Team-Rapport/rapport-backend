@@ -1,6 +1,6 @@
 -- ============================================================
--- Rapport DB Schema v2.1
--- Flyway Migration V2__chat_schema.sql
+-- Rapport DB Schema v2.4
+-- Flyway Migration V4__chat_schema.sql
 -- 내담자-상담사 실시간 채팅 (STOMP WebSocket)
 -- ============================================================
 
