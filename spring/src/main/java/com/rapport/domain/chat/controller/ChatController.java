@@ -13,6 +13,8 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.security.core.Authentication;
+
 import java.security.Principal;
 import java.util.List;
 
@@ -33,7 +35,7 @@ public class ChatController {
     public void sendMessage(@DestinationVariable Long roomId,
                             @Payload ChatMessageDto.Request request,
                             Principal principal) {
-        UserPrincipal userPrincipal = (UserPrincipal) ((org.springframework.security.authentication.UsernamePasswordAuthenticationToken) principal).getPrincipal();
+        UserPrincipal userPrincipal = (UserPrincipal) ((Authentication) principal).getPrincipal();
         Long senderId = userPrincipal.getId();
 
         ChatMessageDto.Response response = chatService.saveMessage(
