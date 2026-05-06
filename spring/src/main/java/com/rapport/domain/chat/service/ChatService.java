@@ -43,6 +43,9 @@ public class ChatService {
     public ChatMessageDto.Response saveMessage(Long roomId, Long senderId,
                                                String content, ChatMessage.MessageType type) {
         ChatRoom room = getRoom(roomId);
+        if (room.getStatus() == ChatRoom.Status.CLOSED) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
         if (!room.isParticipant(senderId)) {
             throw new BusinessException(ErrorCode.ACCESS_DENIED);
         }
