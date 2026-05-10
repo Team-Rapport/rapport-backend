@@ -107,7 +107,7 @@ class DashboardService {
                 .anxietyScore(r.getAnxietyScore())
                 .stressScore(r.getStressScore())
                 .riskLevel(r.getRiskLevel())
-                .isCrisisDetected(r.isCrisisDetected())
+                .crisisDetected(r.isCrisisDetected())
                 .createdAt(r.getCreatedAt())
                 .build();
     }
