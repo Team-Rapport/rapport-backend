@@ -102,6 +102,29 @@ public class User {
         this.isActive = false;
     }
 
+    public void anonymize() {
+        this.email = "withdrawn_" + this.id + "@rapport.kr";
+        this.name = "탈퇴한 사용자";
+        this.phone = null;
+        this.profileImageUrl = null;
+        this.passwordHash = null;
+        this.isAnonymized = true;
+        this.isActive = false;
+        this.deletedAt = LocalDateTime.now();
+    }
+
+    public void deactivate() {
+        this.isActive = false;
+    }
+
+    public void activate() {
+        this.isActive = true;
+    }
+
+    public void changePassword(String encodedPassword) {
+        this.passwordHash = encodedPassword;
+    }
+
     public enum Role {
         CLIENT, COUNSELOR, ADMIN
     }

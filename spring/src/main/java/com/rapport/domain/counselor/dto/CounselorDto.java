@@ -42,4 +42,21 @@ public class CounselorDto {
         private LocalDateTime processedAt;
         private String message;
     }
+
+    // ===== 관리자: 상담사 전체 목록 응답 =====
+    @Getter
+    @Builder
+    public static class AdminCounselorResponse {
+        private Long userId;
+        private Long profileId;
+        private String name;
+        private String email;
+        private String licenseType;
+        private String licenseNumber;
+        private CounselorProfile.ApprovalStatus approvalStatus;
+        private String rejectionReason;
+        private boolean isActive;
+        private LocalDateTime appliedAt;
+        private LocalDateTime approvedAt;
+    }
 }

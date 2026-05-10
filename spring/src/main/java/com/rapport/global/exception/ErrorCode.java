@@ -27,6 +27,15 @@ public enum ErrorCode {
     EMAIL_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 사용 중인 이메일입니다."),
     INVALID_PASSWORD(HttpStatus.BAD_REQUEST, "비밀번호가 올바르지 않습니다."),
     ACCOUNT_DISABLED(HttpStatus.FORBIDDEN, "비활성화된 계정입니다."),
+    ACCOUNT_ALREADY_DEACTIVATED(HttpStatus.CONFLICT, "이미 비활성화된 계정입니다."),
+    ACCOUNT_ALREADY_ACTIVE(HttpStatus.CONFLICT, "이미 활성화된 계정입니다."),
+    OAUTH_USER_NO_PASSWORD(HttpStatus.BAD_REQUEST, "소셜 로그인 계정은 비밀번호가 없습니다."),
+
+    // Email Verification
+    EMAIL_VERIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "이메일 인증 요청을 찾을 수 없습니다."),
+    EMAIL_VERIFICATION_EXPIRED(HttpStatus.BAD_REQUEST, "인증 코드가 만료되었습니다."),
+    EMAIL_VERIFICATION_INVALID(HttpStatus.BAD_REQUEST, "인증 코드가 올바르지 않습니다."),
+    EMAIL_NOT_VERIFIED(HttpStatus.BAD_REQUEST, "이메일 인증이 완료되지 않았습니다."),
 
     // Counselor
     COUNSELOR_NOT_FOUND(HttpStatus.NOT_FOUND, "상담사를 찾을 수 없습니다."),

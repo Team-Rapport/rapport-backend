@@ -28,11 +28,15 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
+    private final EmailVerificationService emailVerificationService;
 
     // ===== 상담사 회원가입 (이메일/비밀번호) =====
 
     @Transactional
     public AuthDto.TokenResponse counselorSignup(AuthDto.CounselorSignupRequest request) {
+        // 이메일 인증 확인
+        emailVerificationService.checkVerified(request.getEmail());
+
         // 이메일 중복 체크
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BusinessException(ErrorCode.EMAIL_ALREADY_EXISTS);
@@ -132,5 +136,44 @@ public class AuthService {
 
         user.updateLastLoginAt();
         return issueTokens(user);
+    }
+
+    // ===== 회원 탈퇴 (소셜/이메일 공통 Soft Delete) =====
+
+    @Transactional
+    public void withdraw(Long userId, String password) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 이메일 계정은 비밀번호 확인
+        if (user.getPasswordHash() != null) {
+            if (password == null || !passwordEncoder.matches(password, user.getPasswordHash())) {
+                throw new BusinessException(ErrorCode.INVALID_PASSWORD);
+            }
+        }
+
+        refreshTokenRepository.deleteAllByUserId(userId);
+        user.anonymize();
+        log.info("User withdrew: userId={}", userId);
+    }
+
+    // ===== 비밀번호 변경 (상담사 전용) =====
+
+    @Transactional
+    public void changePassword(Long userId, AuthDto.ChangePasswordRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        if (user.getPasswordHash() == null) {
+            throw new BusinessException(ErrorCode.OAUTH_USER_NO_PASSWORD);
+        }
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+            throw new BusinessException(ErrorCode.INVALID_PASSWORD);
+        }
+
+        user.changePassword(passwordEncoder.encode(request.getNewPassword()));
+        refreshTokenRepository.deleteAllByUserId(userId);
+        log.info("Password changed: userId={}", userId);
     }
 }

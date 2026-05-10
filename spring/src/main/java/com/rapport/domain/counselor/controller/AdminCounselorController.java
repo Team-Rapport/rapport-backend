@@ -1,9 +1,11 @@
 package com.rapport.domain.counselor.controller;
 
 import com.rapport.domain.counselor.dto.CounselorDto;
+import com.rapport.domain.counselor.entity.CounselorProfile;
 import com.rapport.domain.counselor.service.CounselorApprovalService;
 import com.rapport.global.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -25,6 +27,18 @@ import org.springframework.web.bind.annotation.*;
 public class AdminCounselorController {
 
     private final CounselorApprovalService counselorApprovalService;
+
+    @Operation(summary = "상담사 전체 목록 조회",
+               description = "status 필터(PENDING/APPROVED/REJECTED) 또는 전체 조회. 최신 신청순 정렬.")
+    @GetMapping
+    public ResponseEntity<ApiResponse<Page<CounselorDto.AdminCounselorResponse>>> getAllCounselors(
+            @Parameter(description = "승인 상태 필터 (생략 시 전체)")
+            @RequestParam(required = false) CounselorProfile.ApprovalStatus status,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable) {
+        return ResponseEntity.ok(
+                ApiResponse.ok(counselorApprovalService.getAllCounselors(status, pageable)));
+    }
 
     @Operation(summary = "심사 대기 목록 조회", description = "PENDING 상태의 상담사 목록을 페이지로 조회합니다.")
     @GetMapping("/pending")

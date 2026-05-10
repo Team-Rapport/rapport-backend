@@ -1,5 +1,7 @@
 package com.rapport.domain.user.controller;
 
+import com.rapport.domain.auth.dto.AuthDto;
+import com.rapport.domain.auth.service.AuthService;
 import com.rapport.domain.booking.entity.Booking;
 import com.rapport.domain.booking.entity.BookingRepository;
 import com.rapport.domain.report.entity.ReportRepository;
@@ -13,6 +15,7 @@ import com.rapport.global.util.S3Service;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 import lombok.Builder;
 import lombok.Getter;
@@ -36,6 +39,7 @@ public class UserController {
     private final BookingRepository bookingRepository;
     private final ReportRepository reportRepository;
     private final S3Service s3Service;
+    private final AuthService authService;
 
     @Operation(summary = "마이페이지 통계 조회",
                description = "상담 횟수, 리포트 수")
@@ -90,6 +94,28 @@ public class UserController {
         String url = s3Service.upload(file, "profiles/" + principal.getId());
         user.updateProfileImage(url);
         return ResponseEntity.ok(ApiResponse.ok("프로필 사진이 변경되었습니다.", url));
+    }
+
+    @Operation(summary = "비밀번호 변경",
+               description = "현재 비밀번호 확인 후 새 비밀번호로 변경합니다.",
+               security = @SecurityRequirement(name = "bearerAuth"))
+    @PatchMapping("/me/password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @Valid @RequestBody AuthDto.ChangePasswordRequest request) {
+        authService.changePassword(principal.getId(), request);
+        return ResponseEntity.ok(ApiResponse.ok("비밀번호가 변경되었습니다. 다시 로그인해주세요."));
+    }
+
+    @Operation(summary = "회원 탈퇴",
+               description = "소셜/이메일 계정 공통 탈퇴. 이메일 계정은 비밀번호 확인이 필요합니다. 개인정보는 즉시 익명 처리됩니다.")
+    @DeleteMapping("/me")
+    public ResponseEntity<ApiResponse<Void>> withdraw(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestBody(required = false) AuthDto.WithdrawRequest request) {
+        String password = (request != null) ? request.getPassword() : null;
+        authService.withdraw(principal.getId(), password);
+        return ResponseEntity.ok(ApiResponse.ok("회원 탈퇴가 완료되었습니다."));
     }
 
     // ── DTO ─────────────────────────────────────────────────

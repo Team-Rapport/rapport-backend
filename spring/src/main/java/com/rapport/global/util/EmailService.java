@@ -29,6 +29,23 @@ public class EmailService {
     @Value("${app.frontend-origin}")
     private String frontendUrl;
 
+    // ===== 이메일 인증 코드 =====
+
+    @Async
+    public void sendVerificationCodeEmail(String toEmail, String code, int expirationMinutes) {
+        String subject = "[라포] 이메일 인증 코드";
+        String html = "<div style='font-family:sans-serif;max-width:600px;margin:auto'>"
+                + "<h3>[라포] 이메일 인증</h3>"
+                + "<p>아래 6자리 인증 코드를 입력해주세요. 유효 시간은 <b>" + expirationMinutes + "분</b>입니다.</p>"
+                + "<div style='font-size:32px;font-weight:bold;letter-spacing:8px;"
+                + "margin:20px 0;color:#6C63FF;background:#f5f5f5;padding:16px;text-align:center'>"
+                + code + "</div>"
+                + "<p style='color:#999;font-size:12px'>본인이 요청하지 않으셨다면 이 이메일을 무시해주세요.</p>"
+                + "</div>";
+        sendHtmlEmail(toEmail, subject, html);
+        log.info("Verification code email sent to {}", toEmail);
+    }
+
     // ===== 상담사 승인 이메일 =====
 
     @Async
