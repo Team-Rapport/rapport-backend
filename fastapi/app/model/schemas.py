@@ -11,11 +11,11 @@ class SessionCreateRequest(BaseModel):
 
 class ChatRequest(BaseModel):
     session_id: str
-    user_id: int
     message: str
 
 class FinalizeRequest(BaseModel):
     session_id: str
+    spring_session_id: int  # Spring DB ai_chat_sessions.id
     user_id: int
 
 # ============================================================

@@ -1,8 +1,12 @@
 import json
+import logging
 from openai import AsyncOpenAI
 from redis.asyncio import Redis
+import httpx
 from app.core.config import settings
 from typing import List
+
+logger = logging.getLogger(__name__)
 
 client = AsyncOpenAI(api_key=settings.openai_api_key)
 
@@ -29,6 +33,11 @@ def _session_key(session_id: str) -> str:
 # ──────────────────────────────────────────────
 # 위험 키워드 (실시간 감지용 — analyzer.py RISK_PATTERNS와 동기화)
 # ──────────────────────────────────────────────
+INITIAL_GREETING = (
+    "저는 AI 챗봇 라포예요. 전문 상담 전에 마음 상태를 가볍게 점검해보는 시간이에요. "
+    "요즘 가장 고민되는 일이 있나요?"
+)
+
 CRISIS_KEYWORDS = [
     "죽고 싶", "죽을래", "죽고싶", "자살", "자해",
     "생을 마감", "해치고 싶", "폭력 충동",
@@ -74,7 +83,6 @@ BASE_SYSTEM_PROMPT = """너는 심리상담 전 내담자의 심리 상태 '사�
 2. 슬픔: 우울감, 눈물, 허무함, 외로움
 3. 분노: 화, 짜증, 억울함
 4. 무기력: 의욕 없음, 아무것도 하기 싫음
-5. 희망: 나아질 수 있다는 느낌, 긍정적 기대
 
 ═══ 말투 지침 ═══
 - 친근하고 따뜻하지만 과장되지 않은 존댓말.
@@ -206,9 +214,11 @@ def _detect_crisis(message: str) -> bool:
 # 공개 API
 # ──────────────────────────────────────────────
 
-async def create_session(session_id: str) -> None:
-    """새 대화 세션을 생성한다 (빈 이력으로 초기화, TTL 7200초)."""
-    await _save_messages(session_id, [])
+async def create_session(session_id: str) -> str:
+    """새 대화 세션을 생성하고 AI 첫 인삿말을 저장한다. 인삿말 문자열을 반환한다."""
+    initial_messages = [{"role": "assistant", "content": INITIAL_GREETING}]
+    await _save_messages(session_id, initial_messages)
+    return INITIAL_GREETING
 
 
 async def chat(session_id: str, message: str) -> dict:
@@ -278,14 +288,47 @@ async def chat(session_id: str, message: str) -> dict:
     }
 
 
-async def finalize(session_id: str) -> dict:
+async def _post_report_to_spring(spring_session_id: int, user_id: int, scores: dict) -> None:
+    payload = {
+        "userId": user_id,
+        "sessionId": spring_session_id,
+        "depressionScore": scores["depression_score"],
+        "anxietyScore": scores["anxiety_score"],
+        "stressScore": scores["stress_score"],
+        "riskLevel": scores["risk_level"],
+        "summary": scores.get("summary"),
+        "reportKeywords": scores["topics"],
+        "recommendedSpecializations": scores["recommended_specializations"],
+        "isCrisisDetected": scores["is_crisis"],
+    }
+    async with httpx.AsyncClient() as http:
+        response = await http.post(
+            f"{settings.spring_base_url}/api/v1/reports/internal",
+            json=payload,
+            headers={"X-Service-Key": settings.internal_service_key},
+            timeout=10.0,
+        )
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            if 400 <= e.response.status_code < 500:
+                raise ValueError(
+                    f"리포트 저장 실패 (Spring {e.response.status_code}): {e.response.text}"
+                ) from e
+            raise
+        logger.info("Report saved to Spring: session_id=%s, risk=%s", spring_session_id, scores["risk_level"])
+
+
+async def finalize(session_id: str, spring_session_id: int, user_id: int) -> dict:
     """
-    세션 종료 시 호출. 사용자 발화 전체를 분석해 최종 리포트 데이터를 생성한다.
+    세션 종료 시 호출. 사용자 발화 전체를 분석해 최종 리포트 데이터를 생성하고
+    Spring에 저장한다.
 
     파이프라인은 report_service에 위임:
     1. analyzer (키워드/룰 기반 1차 점수 + 위기 감지)
     2. GPT-4o (맥락 기반 2차 점수)
     3. 가중평균 융합 (키워드 0.4 + LLM 0.6)
+    4. Spring POST /api/v1/reports/internal 호출로 DB 저장
     """
     messages = await _load_messages(session_id)
     user_messages = [m["content"] for m in messages if m["role"] == "user"]
@@ -293,5 +336,6 @@ async def finalize(session_id: str) -> dict:
     from app.service.report_service import generate_scores
     result = await generate_scores(user_messages)
 
+    await _post_report_to_spring(spring_session_id, user_id, result)
     await _get_redis().delete(_session_key(session_id))
     return result

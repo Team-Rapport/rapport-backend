@@ -34,6 +34,16 @@ LLM_WEIGHT = 0.6
 # 1. LLM 점수 산출 프롬프트
 # ============================================================
 
+SUMMARY_SYSTEM_PROMPT = """너는 심리상담 전 사전 점검 대화를 분석하는 평가자야.
+사용자의 발화 전체를 읽고, 내담자의 현재 심리 상태를 1~2문장으로 요약해.
+
+요약 지침:
+- 관찰된 사실(발화 내용)에 근거해서만 작성한다.
+- 진단·처방·판단 언어 사용 금지. ("우울증이다" X → "우울감을 호소했다" O)
+- 한국어, 3인칭 서술체, 100자 이내.
+
+출력: 요약 텍스트만 (JSON, 헤더, 불릿 금지)"""
+
 SCORING_SYSTEM_PROMPT = """너는 심리상담 전 사전 점검 대화를 분석하는 평가자야.
 사용자의 발화 전체를 읽고, 다음 세 지표를 0~100 정수로 평가해.
 
@@ -103,6 +113,20 @@ async def _llm_score(user_messages: List[str]) -> Dict:
     }
 
 
+async def _llm_summary(user_messages: List[str]) -> str:
+    user_text = "\n".join(f"- {msg}" for msg in user_messages)
+    response = await client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": SUMMARY_SYSTEM_PROMPT},
+            {"role": "user", "content": f"다음은 내담자의 발화야:\n{user_text}"},
+        ],
+        max_tokens=150,
+        temperature=0.3,
+    )
+    return response.choices[0].message.content.strip()
+
+
 def _clamp(value, lo: int = 0, hi: int = 100) -> int:
     """정수로 변환 후 0~100 범위로 클램핑."""
     try:
@@ -149,6 +173,7 @@ async def generate_scores(user_messages: List[str]) -> Dict:
     2. LLM 호출해 맥락 기반 2차 점수
     3. 가중평균 융합 (LLM 실패 시 키워드 점수만 사용)
     4. 위험도 재계산
+    5. 요약 생성 (실패 시 None)
 
     Returns:
         {
@@ -158,7 +183,8 @@ async def generate_scores(user_messages: List[str]) -> Dict:
             "risk_level": str,
             "is_crisis": bool,
             "topics": List[str],
-            "recommended_specializations": List[str]
+            "recommended_specializations": List[str],
+            "summary": str | None,
         }
     """
     # 1단계: 키워드 분석
@@ -189,6 +215,13 @@ async def generate_scores(user_messages: List[str]) -> Dict:
     is_crisis = keyword_result["is_crisis"]
     risk_level = _recalculate_risk(depression, anxiety, stress, is_crisis)
 
+    # 5단계: 요약 생성
+    summary = None
+    try:
+        summary = await _llm_summary(user_messages)
+    except Exception as e:
+        logger.warning("Summary generation failed: %s", e)
+
     return {
         "depression_score": depression,
         "anxiety_score": anxiety,
@@ -197,4 +230,5 @@ async def generate_scores(user_messages: List[str]) -> Dict:
         "is_crisis": is_crisis,
         "topics": keyword_result["topics"],
         "recommended_specializations": recommended,
+        "summary": summary,
     }
