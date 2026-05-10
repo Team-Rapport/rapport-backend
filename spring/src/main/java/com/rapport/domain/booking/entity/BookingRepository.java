@@ -59,4 +59,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     // 마이페이지 통계: 내담자 완료 상담 수
     long countByClientIdAndStatus(Long clientId, Booking.BookingStatus status);
+
+    // 관리자 대시보드: 상태별 예약 수
+    long countByStatus(Booking.BookingStatus status);
 }

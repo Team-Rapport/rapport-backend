@@ -115,4 +115,30 @@ public class CounselorApprovalService {
         profile.reapply();
         log.info("Counselor reapplied: userId={}", counselorUserId);
     }
+
+    // ===== 관리자: 전체 상담사 목록 (상태별 필터) =====
+
+    @Transactional(readOnly = true)
+    public Page<CounselorDto.AdminCounselorResponse> getAllCounselors(
+            CounselorProfile.ApprovalStatus status, Pageable pageable) {
+        return counselorProfileRepository
+                .findAllByOptionalStatus(status, pageable)
+                .map(this::toAdminCounselorResponse);
+    }
+
+    private CounselorDto.AdminCounselorResponse toAdminCounselorResponse(CounselorProfile profile) {
+        return CounselorDto.AdminCounselorResponse.builder()
+                .userId(profile.getUser().getId())
+                .profileId(profile.getId())
+                .name(profile.getUser().getName())
+                .email(profile.getUser().getEmail())
+                .licenseType(profile.getLicenseType())
+                .licenseNumber(profile.getLicenseNumber())
+                .approvalStatus(profile.getApprovalStatus())
+                .rejectionReason(profile.getRejectionReason())
+                .isActive(profile.getUser().isActive())
+                .appliedAt(profile.getCreatedAt())
+                .approvedAt(profile.getApprovedAt())
+                .build();
+    }
 }
