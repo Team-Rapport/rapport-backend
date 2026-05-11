@@ -193,7 +193,7 @@ class SessionNoteService {
                 .build();
     }
 
-    // ── DTO ─────────────────────────────────────────────────
+    // ===== DTO =====
     @Getter
     static class SessionNoteRequest {
         @NotBlank private Long bookingId;

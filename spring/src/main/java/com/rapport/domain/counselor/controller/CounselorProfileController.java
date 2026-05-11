@@ -26,7 +26,7 @@ public class CounselorProfileController {
 
     private final CounselorProfileService profileService;
 
-    // ── 상담사 본인 ──────────────────────────────────────────
+    // ===== 상담사 본인 =====
 
     @Operation(summary = "내 프로필 조회 (상담사)")
     @GetMapping("/api/v1/counselor/profile")
@@ -48,7 +48,7 @@ public class CounselorProfileController {
                 profileService.updateMyProfile(principal.getId(), request)));
     }
 
-    // ── 내담자용 공개 조회 ────────────────────────────────────
+    // ===== 내담자용 공개 조회 =====
 
     @Operation(summary = "승인된 상담사 목록 조회 (내담자)")
     @GetMapping("/api/v1/counselors")

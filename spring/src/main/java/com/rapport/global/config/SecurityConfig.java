@@ -41,7 +41,7 @@ public class SecurityConfig {
             "/actuator/health",
             "/api/v1/auth/**",
             "/api/v1/counselors",
-            "/api/v1/counselors/**",
+            "/api/v1/counselors/**",          // 상담사 프로필·리뷰·가용슬롯 공개 조회 포함
             "/swagger-ui/**",
             "/swagger-ui.html",
             "/api/v1/auth/login",

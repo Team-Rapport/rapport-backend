@@ -28,7 +28,7 @@ public class BookingController {
 
     private final BookingService bookingService;
 
-    // ── 공통 ─────────────────────────────────────────────────
+    // ===== 공통 =====
 
     @Operation(summary = "상담사 가용 슬롯 조회")
     @GetMapping("/api/v1/counselors/{counselorId}/schedules")
@@ -38,7 +38,7 @@ public class BookingController {
                 bookingService.getAvailableSlots(counselorId)));
     }
 
-    // ── 내담자 ────────────────────────────────────────────────
+    // ===== 내담자 =====
 
     @Operation(summary = "예약 생성 (내담자)",
                description = "concern(주요 고민)은 선택 입력, reportId는 리포트 첨부 시에만 입력")
@@ -72,7 +72,7 @@ public class BookingController {
                 bookingService.cancelBooking(bookingId, principal.getId(), reason)));
     }
 
-    // ── 상담사 ────────────────────────────────────────────────
+    // ===== 상담사 =====
 
     @Operation(summary = "예약 목록 (상담사)")
     @GetMapping("/api/v1/counselor/bookings")
