@@ -72,6 +72,15 @@ public class CounselorScheduleManageController {
         return ResponseEntity.ok(ApiResponse.ok("브레이크타임이 등록되었습니다."));
     }
 
+    @Operation(summary = "브레이크타임 삭제")
+    @DeleteMapping("/api/v1/counselor/schedules/breaktime/{dayoffId}")
+    public ResponseEntity<ApiResponse<Void>> deleteBreaktime(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long dayoffId) {
+        scheduleService.deleteBreaktime(principal.getId(), dayoffId);
+        return ResponseEntity.ok(ApiResponse.ok("브레이크타임이 삭제되었습니다."));
+    }
+
     @Operation(summary = "휴무일 등록",
                description = "정기(REGULAR_HOLIDAY): 요일 기반 반복. 임시(TEMPORARY_HOLIDAY): 특정 날짜 1회.")
     @PostMapping("/api/v1/counselor/schedules/dayoff")
@@ -82,7 +91,26 @@ public class CounselorScheduleManageController {
         return ResponseEntity.ok(ApiResponse.ok("휴무일이 등록되었습니다."));
     }
 
+    @Operation(summary = "휴무일 삭제")
+    @DeleteMapping("/api/v1/counselor/schedules/dayoff/{dayoffId}")
+    public ResponseEntity<ApiResponse<Void>> deleteDayoff(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long dayoffId) {
+        scheduleService.deleteDayoff(principal.getId(), dayoffId);
+        return ResponseEntity.ok(ApiResponse.ok("휴무일이 삭제되었습니다."));
+    }
+
     // ===== 비활성화 / 삭제 =====
+
+    @Operation(summary = "슬롯 단건 비활성화",
+               description = "특정 슬롯을 is_available=false 처리. PENDING/ACCEPTED 예약 있으면 실패.")
+    @PatchMapping("/api/v1/counselor/schedules/{scheduleId}/deactivate")
+    public ResponseEntity<ApiResponse<Void>> deactivateSchedule(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long scheduleId) {
+        scheduleService.deactivateSchedule(principal.getId(), scheduleId);
+        return ResponseEntity.ok(ApiResponse.ok("슬롯이 비활성화되었습니다."));
+    }
 
     @Operation(summary = "날짜 운영 종료",
                description = "해당 날짜의 모든 슬롯을 is_available=false 처리. PENDING/ACCEPTED 예약 있으면 실패.")

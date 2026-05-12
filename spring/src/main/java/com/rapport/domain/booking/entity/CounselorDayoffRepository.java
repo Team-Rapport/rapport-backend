@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CounselorDayoffRepository extends JpaRepository<CounselorDayoff, Long> {
@@ -22,4 +23,6 @@ public interface CounselorDayoffRepository extends JpaRepository<CounselorDayoff
 
     boolean existsByCounselorIdAndDayoffTypeAndDayoffDate(
             Long counselorId, CounselorDayoff.DayoffType dayoffType, LocalDate dayoffDate);
+
+    Optional<CounselorDayoff> findByIdAndCounselorId(Long id, Long counselorId);
 }

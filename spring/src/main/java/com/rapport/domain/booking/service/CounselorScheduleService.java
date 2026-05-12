@@ -96,6 +96,12 @@ public class CounselorScheduleService {
         List<CounselorDayoff> regularBreaktimes = dayoffRepository
                 .findByCounselorIdAndDayoffTypeAndDayoffDateIsNull(counselorId, BREAKTIME);
 
+        Set<String> existingSlotKeys = scheduleRepository
+                .findByCounselorIdAndSlotDateBetween(counselorId, req.getStartDate(), req.getEndDate())
+                .stream()
+                .map(s -> s.getSlotDate() + "T" + s.getStartTime())
+                .collect(Collectors.toSet());
+
         Set<DayOfWeek> requestedDays = new HashSet<>(req.getDaysOfWeek());
         LocalDate today = LocalDate.now();
         List<CounselorSchedule> toSave = new ArrayList<>();
@@ -116,8 +122,12 @@ public class CounselorScheduleService {
             LocalTime current = req.getStartTime();
             while (!current.plusMinutes(slotUnit).isAfter(req.getEndTime())) {
                 LocalTime slotEnd = current.plusMinutes(slotUnit);
-                if (!overlapsBreaktimes(current, slotEnd, allBreaktimes)) {
+                String key = date + "T" + current;
+                if (!overlapsBreaktimes(current, slotEnd, allBreaktimes) && !existingSlotKeys.contains(key)) {
                     toSave.add(CounselorSchedule.create(counselor, sessionType, date, current, slotEnd));
+                    existingSlotKeys.add(key);
+                } else if (existingSlotKeys.contains(key)) {
+                    skipped++;
                 }
                 current = slotEnd;
             }
@@ -177,6 +187,45 @@ public class CounselorScheduleService {
             }
         }
         log.info("Dayoff created: counselorId={}, type={}", counselorId, req.getType());
+    }
+
+    // ===== 브레이크타임 삭제 =====
+
+    @Transactional
+    public void deleteBreaktime(Long counselorId, Long dayoffId) {
+        CounselorDayoff dayoff = dayoffRepository.findByIdAndCounselorId(dayoffId, counselorId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.DAYOFF_NOT_FOUND));
+        if (dayoff.getDayoffType() != CounselorDayoff.DayoffType.BREAKTIME) {
+            throw new BusinessException(ErrorCode.DAYOFF_NOT_FOUND);
+        }
+        dayoffRepository.delete(dayoff);
+        log.info("Breaktime deleted: dayoffId={}, counselorId={}", dayoffId, counselorId);
+    }
+
+    // ===== 휴무일 삭제 =====
+
+    @Transactional
+    public void deleteDayoff(Long counselorId, Long dayoffId) {
+        CounselorDayoff dayoff = dayoffRepository.findByIdAndCounselorId(dayoffId, counselorId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.DAYOFF_NOT_FOUND));
+        if (dayoff.getDayoffType() == CounselorDayoff.DayoffType.BREAKTIME) {
+            throw new BusinessException(ErrorCode.DAYOFF_NOT_FOUND);
+        }
+        dayoffRepository.delete(dayoff);
+        log.info("Dayoff deleted: dayoffId={}, counselorId={}", dayoffId, counselorId);
+    }
+
+    // ===== 슬롯 단건 비활성화 =====
+
+    @Transactional
+    public void deactivateSchedule(Long counselorId, Long scheduleId) {
+        CounselorSchedule schedule = scheduleRepository.findByIdAndCounselorId(scheduleId, counselorId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.SCHEDULE_NOT_FOUND));
+        if (bookingRepository.existsByScheduleIdAndStatusIn(scheduleId, ACTIVE_STATUSES)) {
+            throw new BusinessException(ErrorCode.SCHEDULE_CANNOT_DEACTIVATE_ACTIVE_BOOKING);
+        }
+        schedule.markUnavailable();
+        log.info("Schedule deactivated: scheduleId={}, counselorId={}", scheduleId, counselorId);
     }
 
     // ===== 날짜 전체 비활성화 =====
