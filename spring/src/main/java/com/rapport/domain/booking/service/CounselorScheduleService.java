@@ -228,6 +228,16 @@ public class CounselorScheduleService {
         log.info("Schedule deactivated: scheduleId={}, counselorId={}", scheduleId, counselorId);
     }
 
+    // ===== 슬롯 단건 활성화 =====
+
+    @Transactional
+    public void activateSchedule(Long counselorId, Long scheduleId) {
+        CounselorSchedule schedule = scheduleRepository.findByIdAndCounselorId(scheduleId, counselorId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.SCHEDULE_NOT_FOUND));
+        schedule.markAvailable();
+        log.info("Schedule activated: scheduleId={}, counselorId={}", scheduleId, counselorId);
+    }
+
     // ===== 날짜 전체 비활성화 =====
 
     @Transactional

@@ -102,6 +102,16 @@ public class CounselorScheduleManageController {
 
     // ===== 비활성화 / 삭제 =====
 
+    @Operation(summary = "슬롯 단건 활성화",
+               description = "특정 슬롯을 is_available=true 처리 (재오픈).")
+    @PatchMapping("/api/v1/counselor/schedules/{scheduleId}/activate")
+    public ResponseEntity<ApiResponse<Void>> activateSchedule(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long scheduleId) {
+        scheduleService.activateSchedule(principal.getId(), scheduleId);
+        return ResponseEntity.ok(ApiResponse.ok("슬롯이 활성화되었습니다."));
+    }
+
     @Operation(summary = "슬롯 단건 비활성화",
                description = "특정 슬롯을 is_available=false 처리. PENDING/ACCEPTED 예약 있으면 실패.")
     @PatchMapping("/api/v1/counselor/schedules/{scheduleId}/deactivate")
