@@ -72,6 +72,10 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     long countByCounselorIdAndBookedDateAndStatusIn(Long counselorId, LocalDate bookedDate,
                                                      List<Booking.BookingStatus> statuses);
 
+    // 통합 일간 뷰: 날짜별 활성 예약 (슬롯 ID 기준 매핑용)
+    List<Booking> findByCounselorIdAndBookedDateAndStatusIn(
+            Long counselorId, LocalDate bookedDate, List<Booking.BookingStatus> statuses);
+
     @Query("SELECT b.schedule.id FROM Booking b " +
            "WHERE b.schedule.counselor.id = :counselorId " +
            "AND b.schedule.slotDate BETWEEN :start AND :end " +

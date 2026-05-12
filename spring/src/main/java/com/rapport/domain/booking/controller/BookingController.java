@@ -104,4 +104,17 @@ public class BookingController {
         return ResponseEntity.ok(ApiResponse.ok("예약을 거절했습니다.",
                 bookingService.rejectBooking(bookingId, principal.getId())));
     }
+
+    @Operation(summary = "예약 취소 (상담사)",
+               description = "PENDING/ACCEPTED 상태 예약 취소. 슬롯 복구 및 내담자에게 알림 발송.")
+    @PatchMapping("/api/v1/counselor/bookings/{bookingId}/cancel")
+    @PreAuthorize("hasRole('COUNSELOR')")
+    public ResponseEntity<ApiResponse<BookingDto.BookingResponse>> cancelBookingByCounselor(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long bookingId,
+            @RequestBody(required = false) BookingDto.CancelRequest request) {
+        String reason = request != null ? request.getReason() : null;
+        return ResponseEntity.ok(ApiResponse.ok("예약을 취소했습니다.",
+                bookingService.cancelBookingByCounselor(bookingId, principal.getId(), reason)));
+    }
 }

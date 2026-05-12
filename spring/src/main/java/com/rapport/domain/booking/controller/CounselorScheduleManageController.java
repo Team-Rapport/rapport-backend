@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.List;
 
 @Tag(name = "Counselor Schedule Management", description = "상담사 예약 슬롯 관리 API")
 @RestController
@@ -155,6 +156,30 @@ public class CounselorScheduleManageController {
 
     // ===== 조회 =====
 
+    @Operation(summary = "브레이크타임 목록 조회")
+    @GetMapping("/api/v1/counselor/schedules/breaktimes")
+    public ResponseEntity<ApiResponse<List<ScheduleManageDto.DayoffResponse>>> getBreaktimes(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                scheduleService.getBreaktimes(principal.getId())));
+    }
+
+    @Operation(summary = "휴무일 목록 조회", description = "정기 휴무일 목록 반환. 임시 휴무일은 /dayoffs/temporary 사용.")
+    @GetMapping("/api/v1/counselor/schedules/dayoffs")
+    public ResponseEntity<ApiResponse<List<ScheduleManageDto.DayoffResponse>>> getDayoffs(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                scheduleService.getDayoffs(principal.getId())));
+    }
+
+    @Operation(summary = "임시 휴무일 목록 조회")
+    @GetMapping("/api/v1/counselor/schedules/dayoffs/temporary")
+    public ResponseEntity<ApiResponse<List<ScheduleManageDto.DayoffResponse>>> getTemporaryDayoffs(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                scheduleService.getTemporaryDayoffs(principal.getId())));
+    }
+
     @Operation(summary = "월별 슬롯 있는 날짜 목록",
                description = "캘린더 마킹용. 해당 월에 슬롯이 존재하는 날짜 목록 반환.")
     @GetMapping("/api/v1/counselor/schedules")
@@ -173,5 +198,15 @@ public class CounselorScheduleManageController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return ResponseEntity.ok(ApiResponse.ok(
                 scheduleService.getDailySchedule(principal.getId(), date)));
+    }
+
+    @Operation(summary = "일별 통합 뷰 (슬롯 + 예약 정보)",
+               description = "각 슬롯에 PENDING/ACCEPTED 예약 정보를 포함해 반환. 타임테이블 렌더링용.")
+    @GetMapping("/api/v1/counselor/schedules/daily/integrated")
+    public ResponseEntity<ApiResponse<ScheduleManageDto.DailyIntegratedResponse>> getDailyIntegrated(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                scheduleService.getDailyScheduleWithBookings(principal.getId(), date)));
     }
 }

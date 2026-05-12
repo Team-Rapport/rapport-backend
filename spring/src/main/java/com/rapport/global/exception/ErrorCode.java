@@ -48,6 +48,7 @@ public enum ErrorCode {
     // Booking
     BOOKING_NOT_FOUND(HttpStatus.NOT_FOUND, "예약을 찾을 수 없습니다."),
     SCHEDULE_NOT_AVAILABLE(HttpStatus.CONFLICT, "해당 시간대는 예약이 불가합니다."),
+    BOOKING_CANCEL_NOT_ALLOWED(HttpStatus.CONFLICT, "완료·취소·거절된 예약은 취소할 수 없습니다."),
 
     // Review
     REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "리뷰를 찾을 수 없습니다."),

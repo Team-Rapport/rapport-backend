@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.YearMonth;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.rapport.domain.booking.entity.CounselorDayoff.DayoffType.*;
@@ -330,6 +331,66 @@ public class CounselorScheduleService {
         return buildDailyResponse(date, settings.getSlotUnit(), schedules);
     }
 
+    // ===== 브레이크타임 목록 조회 =====
+
+    @Transactional(readOnly = true)
+    public List<ScheduleManageDto.DayoffResponse> getBreaktimes(Long counselorId) {
+        return dayoffRepository.findByCounselorIdAndDayoffType(counselorId, BREAKTIME)
+                .stream()
+                .map(this::toDayoffResponse)
+                .toList();
+    }
+
+    // ===== 휴무일 목록 조회 =====
+
+    @Transactional(readOnly = true)
+    public List<ScheduleManageDto.DayoffResponse> getDayoffs(Long counselorId) {
+        return dayoffRepository.findByCounselorIdAndDayoffType(counselorId, REGULAR_HOLIDAY)
+                .stream().map(this::toDayoffResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ScheduleManageDto.DayoffResponse> getTemporaryDayoffs(Long counselorId) {
+        return dayoffRepository.findByCounselorIdAndDayoffType(counselorId, TEMPORARY_HOLIDAY)
+                .stream().map(this::toDayoffResponse).toList();
+    }
+
+    // ===== 일간 슬롯+예약 통합 조회 (상담사용) =====
+
+    @Transactional(readOnly = true)
+    public ScheduleManageDto.DailyIntegratedResponse getDailyScheduleWithBookings(
+            Long counselorId, LocalDate date) {
+        CounselorScheduleSettings settings = settingsRepository.findByCounselorId(counselorId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.SCHEDULE_SETTINGS_NOT_FOUND));
+
+        List<CounselorSchedule> slots =
+                scheduleRepository.findByCounselorIdAndSlotDateOrderByStartTime(counselorId, date);
+
+        Map<Long, Booking> bookingBySlotId = bookingRepository
+                .findByCounselorIdAndBookedDateAndStatusIn(counselorId, date, ACTIVE_STATUSES)
+                .stream()
+                .collect(Collectors.toMap(b -> b.getSchedule().getId(), Function.identity()));
+
+        List<ScheduleManageDto.SlotWithBookingResponse> morning = slots.stream()
+                .filter(s -> !s.getStartTime().isBefore(MORNING_START)
+                          && s.getStartTime().isBefore(MORNING_END))
+                .map(s -> toSlotWithBooking(s, bookingBySlotId.get(s.getId())))
+                .toList();
+
+        List<ScheduleManageDto.SlotWithBookingResponse> afternoon = slots.stream()
+                .filter(s -> !s.getStartTime().isBefore(MORNING_END)
+                          && s.getStartTime().isBefore(AFTERNOON_END))
+                .map(s -> toSlotWithBooking(s, bookingBySlotId.get(s.getId())))
+                .toList();
+
+        return ScheduleManageDto.DailyIntegratedResponse.builder()
+                .date(date)
+                .slotUnit(settings.getSlotUnit())
+                .morning(morning)
+                .afternoon(afternoon)
+                .build();
+    }
+
     // ===== 내부 유틸 =====
 
     private ScheduleManageDto.DailyScheduleResponse buildDailyResponse(
@@ -369,6 +430,36 @@ public class CounselorScheduleService {
                 .startTime(s.getStartTime())
                 .endTime(s.getEndTime())
                 .isAvailable(s.isAvailable())
+                .build();
+    }
+
+    private ScheduleManageDto.DayoffResponse toDayoffResponse(CounselorDayoff d) {
+        return ScheduleManageDto.DayoffResponse.builder()
+                .id(d.getId())
+                .dayoffType(d.getDayoffType())
+                .dayOfWeek(d.getDayOfWeek())
+                .dayoffDate(d.getDayoffDate())
+                .startTime(d.getStartTime())
+                .endTime(d.getEndTime())
+                .build();
+    }
+
+    private ScheduleManageDto.SlotWithBookingResponse toSlotWithBooking(
+            CounselorSchedule slot, Booking booking) {
+        ScheduleManageDto.BookingSummary summary = booking == null ? null :
+                ScheduleManageDto.BookingSummary.builder()
+                        .bookingId(booking.getId())
+                        .clientId(booking.getClient().getId())
+                        .clientName(booking.getClient().getName())
+                        .status(booking.getStatus())
+                        .concern(booking.getConcern())
+                        .build();
+        return ScheduleManageDto.SlotWithBookingResponse.builder()
+                .scheduleId(slot.getId())
+                .startTime(slot.getStartTime())
+                .endTime(slot.getEndTime())
+                .isAvailable(slot.isAvailable())
+                .booking(summary)
                 .build();
     }
 

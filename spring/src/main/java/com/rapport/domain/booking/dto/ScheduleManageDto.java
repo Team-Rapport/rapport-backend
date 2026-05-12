@@ -2,6 +2,8 @@ package com.rapport.domain.booking.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.rapport.domain.booking.entity.Booking;
+import com.rapport.domain.booking.entity.CounselorDayoff;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -175,5 +177,61 @@ public class ScheduleManageDto {
     @Builder
     public static class MonthlyScheduleResponse {
         private List<LocalDate> dates;
+    }
+
+    // ===== 응답: 브레이크타임/휴무일 단건 =====
+
+    @Getter
+    @Builder
+    public static class DayoffResponse {
+        private Long id;
+        private CounselorDayoff.DayoffType dayoffType;
+        private DayOfWeek dayOfWeek;
+
+        private LocalDate dayoffDate;
+
+        @JsonFormat(pattern = "HH:mm")
+        private LocalTime startTime;
+
+        @JsonFormat(pattern = "HH:mm")
+        private LocalTime endTime;
+    }
+
+    // ===== 응답: 일간 통합 뷰 (슬롯 + 예약 매핑) =====
+
+    @Getter
+    @Builder
+    public static class BookingSummary {
+        private Long bookingId;
+        private Long clientId;
+        private String clientName;
+        private Booking.BookingStatus status;
+        private String concern;
+    }
+
+    @Getter
+    @Builder
+    public static class SlotWithBookingResponse {
+        private Long scheduleId;
+
+        @JsonFormat(pattern = "HH:mm")
+        private LocalTime startTime;
+
+        @JsonFormat(pattern = "HH:mm")
+        private LocalTime endTime;
+
+        @JsonProperty("isAvailable")
+        private boolean isAvailable;
+
+        private BookingSummary booking;
+    }
+
+    @Getter
+    @Builder
+    public static class DailyIntegratedResponse {
+        private LocalDate date;
+        private int slotUnit;
+        private List<SlotWithBookingResponse> morning;
+        private List<SlotWithBookingResponse> afternoon;
     }
 }

@@ -137,6 +137,26 @@ public class BookingService {
         return toResponse(booking);
     }
 
+    // ===== 예약 취소 (상담사) =====
+    @Transactional
+    public BookingDto.BookingResponse cancelBookingByCounselor(Long bookingId, Long counselorId,
+                                                                String reason) {
+        Booking booking = bookingRepository.findByIdAndCounselorId(bookingId, counselorId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.BOOKING_NOT_FOUND));
+        if (booking.getStatus() == Booking.BookingStatus.COMPLETED
+                || booking.getStatus() == Booking.BookingStatus.CANCELLED
+                || booking.getStatus() == Booking.BookingStatus.REJECTED) {
+            throw new BusinessException(ErrorCode.BOOKING_CANCEL_NOT_ALLOWED);
+        }
+        booking.cancelByCounselor(reason);
+
+        notificationService.notifyBookingCancelled(
+                booking.getClient(), bookingId, booking.getCounselor().getName());
+
+        log.info("Booking cancelled by counselor: bookingId={}, counselorId={}", bookingId, counselorId);
+        return toResponse(booking);
+    }
+
     // ===== 내담자 예약 목록 =====
     @Transactional(readOnly = true)
     public Page<BookingDto.BookingResponse> getClientBookings(Long clientId,
