@@ -34,6 +34,10 @@ public class CounselorSchedule {
     @Column(name = "end_time", nullable = false)
     private LocalTime endTime;
 
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
+
     @Column(name = "is_available", nullable = false)
     private boolean isAvailable = true;
 

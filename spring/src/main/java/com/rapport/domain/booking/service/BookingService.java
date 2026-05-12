@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 @Slf4j
@@ -24,18 +25,23 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BookingService {
 
-    private final BookingRepository          bookingRepository;
-    private final CounselorScheduleRepository scheduleRepository;
-    private final SessionTypeRepository      sessionTypeRepository;
-    private final ReportRepository           reportRepository;
-    private final UserRepository             userRepository;
-    private final NotificationService        notificationService;
+    private final BookingRepository               bookingRepository;
+    private final CounselorScheduleRepository     scheduleRepository;
+    private final SessionTypeRepository           sessionTypeRepository;
+    private final CounselorSessionTypeRepository  counselorSessionTypeRepository;
+    private final ReportRepository                reportRepository;
+    private final UserRepository                  userRepository;
+    private final NotificationService             notificationService;
 
     // ===== 가용 슬롯 조회 =====
     @Transactional(readOnly = true)
     public List<BookingDto.ScheduleSlotResponse> getAvailableSlots(Long counselorId) {
-        return scheduleRepository.findAvailableSlots(counselorId, LocalDate.now())
+        LocalDate today = LocalDate.now();
+        LocalTime now   = LocalTime.now();
+        return scheduleRepository.findAvailableSlots(counselorId, today)
                 .stream()
+                .filter(s -> s.getSlotDate().isAfter(today)
+                          || s.getStartTime().isAfter(now))
                 .map(s -> BookingDto.ScheduleSlotResponse.builder()
                         .scheduleId(s.getId())
                         .slotDate(s.getSlotDate())
@@ -59,6 +65,11 @@ public class BookingService {
 
         SessionType sessionType = sessionTypeRepository.findById(req.getSessionTypeId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+
+        if (!counselorSessionTypeRepository.existsByCounselorIdAndSessionTypeId(
+                req.getCounselorId(), req.getSessionTypeId())) {
+            throw new BusinessException(ErrorCode.COUNSELOR_SESSION_TYPE_NOT_OFFERED);
+        }
 
         Report report = null;
         if (req.getReportId() != null) {

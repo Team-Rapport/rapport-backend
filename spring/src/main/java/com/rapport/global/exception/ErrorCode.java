@@ -64,6 +64,7 @@ public enum ErrorCode {
     SCHEDULE_CANNOT_CLOSE_ACTIVE_BOOKING(HttpStatus.CONFLICT, "PENDING 또는 ACCEPTED 예약이 있는 슬롯이 포함되어 해당 날짜를 닫을 수 없습니다."),
     SCHEDULE_CANNOT_DEACTIVATE_ACTIVE_BOOKING(HttpStatus.CONFLICT, "PENDING 또는 ACCEPTED 예약이 있는 슬롯은 비활성화할 수 없습니다."),
     DAYOFF_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 브레이크타임/휴무일을 찾을 수 없습니다."),
+    COUNSELOR_SESSION_TYPE_NOT_OFFERED(HttpStatus.BAD_REQUEST, "해당 상담사가 제공하지 않는 상담 유형입니다."),
 
     // File
     FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "파일 업로드에 실패했습니다."),

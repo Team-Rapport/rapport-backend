@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.YearMonth;
 import java.util.*;
@@ -318,6 +319,14 @@ public class CounselorScheduleService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.SCHEDULE_SETTINGS_NOT_FOUND));
         List<CounselorSchedule> schedules =
                 scheduleRepository.findByCounselorIdAndSlotDateAndIsAvailableTrueOrderByStartTime(counselorId, date);
+
+        if (date.equals(LocalDate.now())) {
+            LocalTime now = LocalTime.now();
+            schedules = schedules.stream()
+                    .filter(s -> s.getStartTime().isAfter(now))
+                    .toList();
+        }
+
         return buildDailyResponse(date, settings.getSlotUnit(), schedules);
     }
 
