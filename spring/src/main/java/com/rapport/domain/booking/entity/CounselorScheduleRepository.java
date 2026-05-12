@@ -32,6 +32,9 @@ public interface CounselorScheduleRepository extends JpaRepository<CounselorSche
     List<CounselorSchedule> findByCounselorIdAndSlotDateBetween(
             Long counselorId, LocalDate startDate, LocalDate endDate);
 
+    List<CounselorSchedule> findByCounselorIdAndSlotDateGreaterThanEqual(
+            Long counselorId, LocalDate date);
+
     @Query("SELECT DISTINCT s.slotDate FROM CounselorSchedule s " +
            "WHERE s.counselor.id = :counselorId " +
            "AND s.slotDate BETWEEN :start AND :end " +

@@ -59,6 +59,39 @@ public class CounselorScheduleService {
                 .build();
     }
 
+    // ===== 슬롯 단위 변경 =====
+
+    @Transactional
+    public ScheduleManageDto.UpdateSettingsResponse updateSettings(Long counselorId,
+                                                                    ScheduleManageDto.UpdateSettingsRequest req) {
+        if (req.getSlotUnit() != 30 && req.getSlotUnit() != 60) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE, "슬롯 단위는 30분 또는 60분만 가능합니다.");
+        }
+        CounselorScheduleSettings settings = settingsRepository.findByCounselorId(counselorId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.SCHEDULE_SETTINGS_NOT_FOUND));
+
+        LocalDate today = LocalDate.now();
+        LocalDate lastBookedDate = bookingRepository
+                .findMaxBookedDate(counselorId, today, ACTIVE_STATUSES)
+                .orElse(null);
+
+        LocalDate effectiveFrom = lastBookedDate != null ? lastBookedDate.plusDays(1) : today;
+
+        List<CounselorSchedule> slotsToDelete =
+                scheduleRepository.findByCounselorIdAndSlotDateGreaterThanEqual(counselorId, effectiveFrom);
+        scheduleRepository.deleteAll(slotsToDelete);
+
+        settings.updateSlotUnit(req.getSlotUnit());
+
+        log.info("SlotUnit updated: counselorId={}, newSlotUnit={}, effectiveFrom={}, deleted={}",
+                counselorId, req.getSlotUnit(), effectiveFrom, slotsToDelete.size());
+        return ScheduleManageDto.UpdateSettingsResponse.builder()
+                .newSlotUnit(req.getSlotUnit())
+                .effectiveFrom(effectiveFrom)
+                .deletedSlotCount(slotsToDelete.size())
+                .build();
+    }
+
     // ===== 일정 단건 생성 =====
 
     @Transactional

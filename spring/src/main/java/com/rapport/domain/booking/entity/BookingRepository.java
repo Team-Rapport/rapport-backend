@@ -76,6 +76,13 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     List<Booking> findByCounselorIdAndBookedDateAndStatusIn(
             Long counselorId, LocalDate bookedDate, List<Booking.BookingStatus> statuses);
 
+    // slotUnit 변경 시 마지막 예약 날짜 조회
+    @Query("SELECT MAX(b.bookedDate) FROM Booking b WHERE b.counselor.id = :counselorId " +
+           "AND b.bookedDate >= :from AND b.status IN :statuses")
+    Optional<LocalDate> findMaxBookedDate(@Param("counselorId") Long counselorId,
+                                          @Param("from") LocalDate from,
+                                          @Param("statuses") List<Booking.BookingStatus> statuses);
+
     @Query("SELECT b.schedule.id FROM Booking b " +
            "WHERE b.schedule.counselor.id = :counselorId " +
            "AND b.schedule.slotDate BETWEEN :start AND :end " +

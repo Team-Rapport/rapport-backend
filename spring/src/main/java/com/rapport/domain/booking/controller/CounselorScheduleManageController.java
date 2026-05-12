@@ -31,13 +31,23 @@ public class CounselorScheduleManageController {
     // ===== 슬롯 단위 설정 =====
 
     @Operation(summary = "슬롯 단위 설정 (최초 1회)",
-               description = "slotUnit(분) 설정. 한 번 설정하면 변경 불가.")
+               description = "30 또는 60분 설정. 변경은 PATCH 사용.")
     @PostMapping("/api/v1/counselor/schedule/settings")
     public ResponseEntity<ApiResponse<ScheduleManageDto.SettingsResponse>> createSettings(
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody ScheduleManageDto.CreateSettingsRequest request) {
         return ResponseEntity.ok(ApiResponse.ok("슬롯 설정이 완료되었습니다.",
                 scheduleService.createSettings(principal.getId(), request)));
+    }
+
+    @Operation(summary = "슬롯 단위 변경 (30 ↔ 60분)",
+               description = "마지막 예약일 다음 날부터 새 slotUnit 적용. 해당 시점 이후 슬롯은 자동 삭제됩니다.")
+    @PatchMapping("/api/v1/counselor/schedule/settings")
+    public ResponseEntity<ApiResponse<ScheduleManageDto.UpdateSettingsResponse>> updateSettings(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @Valid @RequestBody ScheduleManageDto.UpdateSettingsRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok("슬롯 단위가 변경되었습니다.",
+                scheduleService.updateSettings(principal.getId(), request)));
     }
 
     // ===== 일정 생성 =====

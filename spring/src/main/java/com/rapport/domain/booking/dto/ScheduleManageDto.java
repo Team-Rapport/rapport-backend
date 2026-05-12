@@ -33,6 +33,20 @@ public class ScheduleManageDto {
         private int slotUnit;
     }
 
+    @Getter
+    public static class UpdateSettingsRequest {
+        @NotNull(message = "슬롯 단위를 입력해주세요.")
+        private Integer slotUnit; // 30 또는 60만 허용
+    }
+
+    @Getter
+    @Builder
+    public static class UpdateSettingsResponse {
+        private int newSlotUnit;
+        private LocalDate effectiveFrom;
+        private int deletedSlotCount;
+    }
+
     // ===== 일정 일괄 생성 =====
 
     @Getter

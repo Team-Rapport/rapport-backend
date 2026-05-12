@@ -40,4 +40,8 @@ public class CounselorScheduleSettings {
         s.slotUnit = slotUnit;
         return s;
     }
+
+    public void updateSlotUnit(int slotUnit) {
+        this.slotUnit = slotUnit;
+    }
 }
