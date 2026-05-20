@@ -71,6 +71,7 @@ public class Notification {
 
     public enum NotificationType {
         BOOKING_REQ, CONFIRMED, CANCELLED, INTAKE_REQ,
+        INTAKE_FORM_REQUESTED, INTAKE_FORM_SUBMITTED,
         REMINDER, CHAT, REPORT, SYSTEM,
         COUNSELOR_APPROVED, COUNSELOR_REJECTED
     }

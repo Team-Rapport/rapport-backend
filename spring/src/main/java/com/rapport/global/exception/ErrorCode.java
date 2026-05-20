@@ -49,6 +49,12 @@ public enum ErrorCode {
     BOOKING_NOT_FOUND(HttpStatus.NOT_FOUND, "예약을 찾을 수 없습니다."),
     SCHEDULE_NOT_AVAILABLE(HttpStatus.CONFLICT, "해당 시간대는 예약이 불가합니다."),
 
+    // Intake Form
+    INTAKE_FORM_NOT_FOUND(HttpStatus.NOT_FOUND, "제출된 접수면접지가 없습니다."),
+    INTAKE_FORM_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 제출된 접수면접지가 있습니다. 수정 API를 이용해주세요."),
+    INTAKE_FORM_BOOKING_NOT_ACCEPTED(HttpStatus.BAD_REQUEST, "예약 확정(ACCEPTED) 상태에서만 접수면접지를 작성할 수 있습니다."),
+    INTAKE_FORM_DEADLINE_PASSED(HttpStatus.BAD_REQUEST, "상담일 자정이 지나 접수면접지를 작성할 수 없습니다."),
+
     // File
     FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "파일 업로드에 실패했습니다."),
     FILE_NOT_FOUND(HttpStatus.NOT_FOUND, "파일을 찾을 수 없습니다.");
