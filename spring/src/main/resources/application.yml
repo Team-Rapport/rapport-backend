@@ -90,7 +90,7 @@ app:
     from: ${MAIL_FROM:noreply@rapport.kr}
     from-name: "라포(Rapport)"
   ai-server-url: ${AI_SERVER_URL:http://localhost:8000}
-  internal-service-key: ${APP_INTERNAL_SERVICE_KEY:rapport-internal-key}
+  internal-service-key: ${INTERNAL_SERVICE_KEY:rapport-internal-dev-key}
 
 # ── CORS (localhost:3000 → 5173으로 수정 — .env와 불일치 수정) ─
 cors:

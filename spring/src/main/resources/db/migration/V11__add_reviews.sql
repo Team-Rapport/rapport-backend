@@ -1,1 +1,24 @@
-﻿SET NAMES utf8mb4;SET time_zone = '+09:00';-- ============================================================-- reviews — 예약 리뷰 (예약 1건당 1개)-- ============================================================CREATE TABLE IF NOT EXISTS `reviews` (    `id`            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,    `booking_id`    BIGINT UNSIGNED NOT NULL,    `client_id`     BIGINT UNSIGNED NOT NULL,    `counselor_id`  BIGINT UNSIGNED NOT NULL,    `rating`        TINYINT UNSIGNED NOT NULL COMMENT '1~5점',    `content`       TEXT            NULL,    `created_at`    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,    `updated_at`    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,    `deleted_at`    DATETIME        NULL     COMMENT 'Soft Delete',    PRIMARY KEY (`id`),    UNIQUE KEY `uk_review_booking` (`booking_id`),    INDEX `idx_review_counselor` (`counselor_id`, `deleted_at`),    INDEX `idx_review_client` (`client_id`),    CONSTRAINT `fk_review_booking`   FOREIGN KEY (`booking_id`)   REFERENCES `bookings`(`id`),    CONSTRAINT `fk_review_client`    FOREIGN KEY (`client_id`)    REFERENCES `users`(`id`),    CONSTRAINT `fk_review_counselor` FOREIGN KEY (`counselor_id`) REFERENCES `users`(`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+SET NAMES utf8mb4;
+SET time_zone = '+09:00';
+
+-- ============================================================
+-- reviews — 예약 리뷰 (예약 1건당 1개)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `reviews` (
+    `id`            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `booking_id`    BIGINT UNSIGNED NOT NULL,
+    `client_id`     BIGINT UNSIGNED NOT NULL,
+    `counselor_id`  BIGINT UNSIGNED NOT NULL,
+    `rating`        TINYINT UNSIGNED NOT NULL COMMENT '1~5점',
+    `content`       TEXT            NULL,
+    `created_at`    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `deleted_at`    DATETIME        NULL     COMMENT 'Soft Delete',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_review_booking` (`booking_id`),
+    INDEX `idx_review_counselor` (`counselor_id`, `deleted_at`),
+    INDEX `idx_review_client` (`client_id`),
+    CONSTRAINT `fk_review_booking`   FOREIGN KEY (`booking_id`)   REFERENCES `bookings`(`id`),
+    CONSTRAINT `fk_review_client`    FOREIGN KEY (`client_id`)    REFERENCES `users`(`id`),
+    CONSTRAINT `fk_review_counselor` FOREIGN KEY (`counselor_id`) REFERENCES `users`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

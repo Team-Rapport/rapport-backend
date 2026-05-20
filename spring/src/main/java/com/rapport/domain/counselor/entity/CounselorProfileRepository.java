@@ -32,4 +32,9 @@ public interface CounselorProfileRepository
             @Param("status") CounselorProfile.ApprovalStatus status, Pageable pageable);
 
     long countByApprovalStatus(CounselorProfile.ApprovalStatus status);
+
+    // 배치: 모든 상담사 평점 초기화 (삭제되지 않은 프로필 대상)
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE CounselorProfile cp SET cp.averageRating = NULL, cp.reviewCount = 0")
+    void resetAllRatings();
 }

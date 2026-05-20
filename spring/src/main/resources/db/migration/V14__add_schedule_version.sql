@@ -1,1 +1,4 @@
-﻿SET NAMES utf8mb4;ALTER TABLE `counselor_schedules`    ADD COLUMN `version` BIGINT NOT NULL DEFAULT 0 COMMENT '낙관적 락 버전';
+SET NAMES utf8mb4;
+
+ALTER TABLE `counselor_schedules`
+    ADD COLUMN `version` BIGINT NOT NULL DEFAULT 0 COMMENT '낙관적 락 버전';
