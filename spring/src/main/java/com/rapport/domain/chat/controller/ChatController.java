@@ -25,11 +25,7 @@ public class ChatController {
     private final ChatService chatService;
     private final SimpMessagingTemplate messagingTemplate;
 
-    // ──────────────────────────────────────────────
-    // STOMP: 메시지 전송
-    // - 구독: /topic/chat.{roomId}
-    // - 전송: /app/chat.{roomId}
-    // ──────────────────────────────────────────────
+    // ===== STOMP: 메시지 전송 =====
 
     @MessageMapping("/chat.{roomId}")
     public void sendMessage(@DestinationVariable Long roomId,
@@ -46,10 +42,7 @@ public class ChatController {
         messagingTemplate.convertAndSend("/topic/chat." + roomId, response);
     }
 
-    // ──────────────────────────────────────────────
-    // REST: 채팅방 생성
-    // POST /api/v1/chat/rooms
-    // ──────────────────────────────────────────────
+    // ===== REST: 채팅방 생성 =====
 
     @PostMapping("/api/v1/chat/rooms")
     public ApiResponse<ChatMessageDto.RoomResponse> createRoom(
@@ -59,10 +52,7 @@ public class ChatController {
                 principal.getId(), request.getCounselorId(), null));
     }
 
-    // ──────────────────────────────────────────────
-    // REST: 채팅방 목록 조회
-    // GET /api/v1/chat/rooms
-    // ──────────────────────────────────────────────
+    // ===== REST: 채팅방 목록 조회 =====
 
     @GetMapping("/api/v1/chat/rooms")
     public ApiResponse<List<ChatMessageDto.RoomResponse>> getMyRooms(
@@ -70,10 +60,7 @@ public class ChatController {
         return ApiResponse.ok(chatService.getMyRooms(principal.getId()));
     }
 
-    // ──────────────────────────────────────────────
-    // REST: 메시지 히스토리 조회
-    // GET /api/v1/chat/rooms/{roomId}/messages
-    // ──────────────────────────────────────────────
+    // ===== REST: 메시지 히스토리 조회 =====
 
     @GetMapping("/api/v1/chat/rooms/{roomId}/messages")
     public ApiResponse<ChatMessageDto.HistoryResponse> getHistory(

@@ -6,9 +6,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Repository;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -46,14 +44,6 @@ public class CounselorSessionType {
     }
 
     public void updatePrice(int price) { this.price = price; }
-}
-
-// ══════════════════════════════════════════════════════════════
-// Repository
-// ══════════════════════════════════════════════════════════════
-@Repository
-interface CounselorSessionTypeRepository extends JpaRepository<CounselorSessionType, Long> {
-    List<CounselorSessionType> findAllByCounselorId(Long counselorId);
 }
 
 // ══════════════════════════════════════════════════════════════

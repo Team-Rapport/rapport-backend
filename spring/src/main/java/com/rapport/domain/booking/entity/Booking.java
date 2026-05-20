@@ -117,6 +117,18 @@ public class Booking {
         this.schedule.markAvailable();
     }
 
+    public void cancelByCounselor(String reason) {
+        if (status == BookingStatus.COMPLETED || status == BookingStatus.CANCELLED
+                || status == BookingStatus.REJECTED) {
+            throw new IllegalStateException("취소할 수 없는 상태입니다.");
+        }
+        this.status = BookingStatus.CANCELLED;
+        this.cancellationReason = reason;
+        this.cancelledBy = CancelledBy.COUNSELOR;
+        this.cancelledAt = LocalDateTime.now();
+        this.schedule.markAvailable();
+    }
+
     public void complete() { this.status = BookingStatus.COMPLETED; }
 
     private void validatePending() {

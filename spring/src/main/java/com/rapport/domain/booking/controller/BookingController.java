@@ -28,7 +28,7 @@ public class BookingController {
 
     private final BookingService bookingService;
 
-    // ── 공통 ─────────────────────────────────────────────────
+    // ===== 공통 =====
 
     @Operation(summary = "상담사 가용 슬롯 조회")
     @GetMapping("/api/v1/counselors/{counselorId}/schedules")
@@ -38,7 +38,7 @@ public class BookingController {
                 bookingService.getAvailableSlots(counselorId)));
     }
 
-    // ── 내담자 ────────────────────────────────────────────────
+    // ===== 내담자 =====
 
     @Operation(summary = "예약 생성 (내담자)",
                description = "concern(주요 고민)은 선택 입력, reportId는 리포트 첨부 시에만 입력")
@@ -72,7 +72,7 @@ public class BookingController {
                 bookingService.cancelBooking(bookingId, principal.getId(), reason)));
     }
 
-    // ── 상담사 ────────────────────────────────────────────────
+    // ===== 상담사 =====
 
     @Operation(summary = "예약 목록 (상담사)")
     @GetMapping("/api/v1/counselor/bookings")
@@ -103,5 +103,18 @@ public class BookingController {
             @PathVariable Long bookingId) {
         return ResponseEntity.ok(ApiResponse.ok("예약을 거절했습니다.",
                 bookingService.rejectBooking(bookingId, principal.getId())));
+    }
+
+    @Operation(summary = "예약 취소 (상담사)",
+               description = "PENDING/ACCEPTED 상태 예약 취소. 슬롯 복구 및 내담자에게 알림 발송.")
+    @PatchMapping("/api/v1/counselor/bookings/{bookingId}/cancel")
+    @PreAuthorize("hasRole('COUNSELOR')")
+    public ResponseEntity<ApiResponse<BookingDto.BookingResponse>> cancelBookingByCounselor(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long bookingId,
+            @RequestBody(required = false) BookingDto.CancelRequest request) {
+        String reason = request != null ? request.getReason() : null;
+        return ResponseEntity.ok(ApiResponse.ok("예약을 취소했습니다.",
+                bookingService.cancelBookingByCounselor(bookingId, principal.getId(), reason)));
     }
 }

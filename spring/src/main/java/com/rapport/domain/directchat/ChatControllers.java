@@ -94,7 +94,7 @@ class StompChatController {
         log.debug("Message sent: roomId={}, senderId={}", roomId, senderId);
     }
 
-    // ── DTO ─────────────────────────────────────────────────
+    // ===== DTO =====
     @Getter
     static class ChatMessage {
         private String content;
@@ -118,7 +118,7 @@ class StompChatController {
 // ══════════════════════════════════════════════════════════════
 @Tag(name = "Direct Chat", description = "상담사-내담자 1:1 채팅 API")
 @RestController
-@RequestMapping("/api/v1/chat/rooms")
+@RequestMapping("/api/v1/direct/rooms")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "bearerAuth")
 class ChatRoomController {
@@ -194,7 +194,7 @@ class ChatRoomController {
         return ResponseEntity.ok(ApiResponse.ok(messages));
     }
 
-    // ── DTO ─────────────────────────────────────────────────
+    // ===== DTO =====
     @Getter
     static class CreateRoomRequest {
         private Long counselorId;

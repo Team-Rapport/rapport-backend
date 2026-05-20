@@ -151,6 +151,16 @@ public class CounselorProfile {
         MALE, FEMALE, ANY
     }
 
+    public void updateRating(BigDecimal averageRating, int reviewCount) {
+        this.averageRating = averageRating;
+        this.reviewCount = reviewCount;
+    }
+
+    public void resetRating() {
+        this.averageRating = null;
+        this.reviewCount = 0;
+    }
+
     public void reapply() {
         if (this.approvalStatus != ApprovalStatus.REJECTED) {
             throw new IllegalStateException("반려된 상태에서만 재신청할 수 있습니다.");
