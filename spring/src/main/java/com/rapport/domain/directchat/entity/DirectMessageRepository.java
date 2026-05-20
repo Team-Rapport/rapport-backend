@@ -1,4 +1,4 @@
-﻿package com.rapport.domain.directchat.entity;
+package com.rapport.domain.directchat.entity;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;

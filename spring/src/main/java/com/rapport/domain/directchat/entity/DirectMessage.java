@@ -1,4 +1,4 @@
-﻿package com.rapport.domain.directchat.entity;
+package com.rapport.domain.directchat.entity;
 
 import com.rapport.domain.user.entity.User;
 import jakarta.persistence.*;

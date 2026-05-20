@@ -1,4 +1,4 @@
-﻿package com.rapport.domain.directchat;
+package com.rapport.domain.directchat;
 
 import com.rapport.domain.directchat.entity.ChatRoom;
 import com.rapport.domain.directchat.entity.ChatRoomRepository;
