@@ -1,8 +1,8 @@
 package com.rapport.domain.booking.controller;
 
 import com.rapport.domain.booking.dto.BookingDto;
-import com.rapport.domain.booking.entity.Booking;
 import com.rapport.domain.booking.entity.BookingRepository;
+import com.rapport.domain.booking.service.BookingService;
 import com.rapport.global.config.UserPrincipal;
 import com.rapport.global.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -31,6 +31,7 @@ import java.util.List;
 public class CounselorScheduleController {
 
     private final BookingRepository bookingRepository;
+    private final BookingService    bookingService;
 
     /**
      * 특정 날짜의 예약 목록 (시간순 정렬)
@@ -46,7 +47,7 @@ public class CounselorScheduleController {
         List<BookingDto.BookingResponse> schedule =
                 bookingRepository.findDailyByCounselor(principal.getId(), date)
                         .stream()
-                        .map(this::toResponse)
+                        .map(bookingService::toResponse)
                         .toList();
 
         return ResponseEntity.ok(ApiResponse.ok(schedule));
@@ -77,19 +78,4 @@ public class CounselorScheduleController {
         return ResponseEntity.ok(ApiResponse.ok(bookedDates));
     }
 
-    private BookingDto.BookingResponse toResponse(Booking b) {
-        return BookingDto.BookingResponse.builder()
-                .bookingId(b.getId())
-                .status(b.getStatus())
-                .counselorId(b.getCounselor().getId())
-                .counselorName(b.getCounselor().getName())
-                .clientId(b.getClient().getId())
-                .clientName(b.getClient().getName())
-                .bookedDate(b.getBookedDate())
-                .bookedStartTime(b.getBookedStartTime())
-                .bookedEndTime(b.getBookedEndTime())
-                .sessionTypeName(b.getSessionType().getName())
-                .createdAt(b.getCreatedAt())
-                .build();
-    }
 }

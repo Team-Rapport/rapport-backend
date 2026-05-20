@@ -1,7 +1,9 @@
 package com.rapport.domain.session;
 
+import com.rapport.domain.booking.dto.BookingDto;
 import com.rapport.domain.booking.entity.Booking;
 import com.rapport.domain.booking.entity.BookingRepository;
+import com.rapport.domain.booking.service.BookingService;
 import com.rapport.domain.user.entity.User;
 import com.rapport.domain.user.entity.UserRepository;
 import com.rapport.global.config.UserPrincipal;
@@ -16,12 +18,8 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.*;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -230,7 +228,8 @@ class SessionNoteService {
 class SessionNoteController {
 
     private final SessionNoteService noteService;
-    private final BookingRepository bookingRepository;
+    private final BookingRepository  bookingRepository;
+    private final BookingService     bookingService;
 
     @Operation(summary = "상담 기록 작성",
                description = "회기 종료 후 상담 기록을 작성합니다. noteType: SOAP / PROGRESS / GENERAL")
@@ -274,12 +273,15 @@ class SessionNoteController {
     @Operation(summary = "내담자별 예약 이력",
                description = "특정 내담자와의 모든 예약 목록을 최신순으로 반환합니다.")
     @GetMapping("/clients/{clientId}/bookings")
-    public ResponseEntity<ApiResponse<List<Booking>>> getClientBookings(
+    public ResponseEntity<ApiResponse<List<BookingDto.BookingResponse>>> getClientBookings(
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long clientId) {
-        List<Booking> bookings =
+        List<BookingDto.BookingResponse> bookings =
                 bookingRepository.findAllByCounselorIdAndClientIdOrderByCreatedAtDesc(
-                        principal.getId(), clientId);
+                                principal.getId(), clientId)
+                        .stream()
+                        .map(bookingService::toResponse)
+                        .toList();
         return ResponseEntity.ok(ApiResponse.ok(bookings));
     }
 }
