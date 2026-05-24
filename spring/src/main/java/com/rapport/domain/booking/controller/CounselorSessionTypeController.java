@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,6 +24,7 @@ public class CounselorSessionTypeController {
 
     @Operation(summary = "상담사 상담 유형/가격 목록 조회")
     @GetMapping
+    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<List<SessionTypePrice>>> getSessionTypes(
             @PathVariable Long counselorId) {
         List<SessionTypePrice> result = repository.findAllByCounselorId(counselorId)

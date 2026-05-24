@@ -1,12 +1,19 @@
 package com.rapport.domain.booking.entity;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
 @Repository
 public interface CounselorSessionTypeRepository extends JpaRepository<CounselorSessionType, Long> {
+    @Query("""
+            SELECT cst
+            FROM CounselorSessionType cst
+            JOIN FETCH cst.sessionType st
+            WHERE cst.counselor.id = :counselorId
+            """)
     List<CounselorSessionType> findAllByCounselorId(Long counselorId);
     boolean existsByCounselorIdAndSessionTypeId(Long counselorId, Long sessionTypeId);
 }
