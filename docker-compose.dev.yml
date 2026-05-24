@@ -35,6 +35,9 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      # docker-compose 네트워크에서 Spring 컨테이너를 사용하는 경우 기본 URL
+      SPRING_BASE_URL: ${SPRING_BASE_URL:-http://spring:8080}
     volumes:
       - ./fastapi:/app
     command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000

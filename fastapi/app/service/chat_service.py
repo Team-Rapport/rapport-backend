@@ -6,7 +6,7 @@ import httpx
 from app.core.config import settings
 from typing import List
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("uvicorn.error")
 
 client = AsyncOpenAI(api_key=settings.openai_api_key)
 
@@ -322,6 +322,10 @@ async def chat(session_id: str, message: str) -> dict:
 
 
 async def _post_report_to_spring(spring_session_id: int, user_id: int, scores: dict) -> None:
+    if not settings.internal_service_key:
+        logger.error("INTERNAL_SERVICE_KEY is missing. Cannot call Spring internal report API.")
+        raise ValueError("FastAPI INTERNAL_SERVICE_KEY 설정이 비어 있습니다.")
+
     payload = {
         "userId": user_id,
         "sessionId": spring_session_id,
@@ -335,29 +339,79 @@ async def _post_report_to_spring(spring_session_id: int, user_id: int, scores: d
         "recommendedSpecializations": scores["recommended_specializations"],
         "isCrisisDetected": scores["is_crisis"],
     }
-    spring_url = f"{settings.spring_base_url.rstrip('/')}/api/v1/reports/internal"
+    # 환경별 Spring URL 후보:
+    # - 로컬 실행(FastAPI host): localhost:8080
+    # - 도커 네트워크(FastAPI+Spring docker): spring:8080
+    # - 하이브리드(FastAPI docker + Spring host): host.docker.internal:8080
+    candidates = [settings.spring_base_url, settings.spring_base_url_docker, "http://host.docker.internal:8080"]
+    seen = set()
+    candidate_urls = []
+    for url in candidates:
+        normalized = url.rstrip("/")
+        if normalized and normalized not in seen:
+            seen.add(normalized)
+            candidate_urls.append(normalized)
+
+    last_request_error: httpx.RequestError | None = None
     async with httpx.AsyncClient() as http:
-        try:
-            response = await http.post(
+        for base_url in candidate_urls:
+            spring_url = f"{base_url}/api/v1/reports/internal"
+            try:
+                logger.info("Calling Spring internal report API: url=%s, sessionId=%s, userId=%s", spring_url, spring_session_id, user_id)
+                response = await http.post(
+                    spring_url,
+                    json=payload,
+                    headers={"X-Service-Key": settings.internal_service_key},
+                    timeout=10.0,
+                )
+            except httpx.RequestError as e:
+                last_request_error = e
+                logger.warning("Spring API connection failed: url=%s, error=%s", spring_url, str(e))
+                continue
+
+            body_preview = response.text[:500] if response.text else ""
+            logger.info(
+                "Spring API response: url=%s, status=%s, body=%s",
                 spring_url,
-                json=payload,
-                headers={"X-Service-Key": settings.internal_service_key},
-                timeout=10.0,
+                response.status_code,
+                body_preview,
             )
-        except httpx.RequestError as e:
-            raise ValueError(
-                f"Spring 서버 연결 실패: {settings.spring_base_url} "
-                "(SPRING_BASE_URL 설정과 Spring 서버 실행 상태를 확인하세요)"
-            ) from e
-        try:
-            response.raise_for_status()
-        except httpx.HTTPStatusError as e:
-            if 400 <= e.response.status_code < 500:
+
+            if response.status_code in (401, 403):
+                logger.error(
+                    "Spring internal API auth failed. Check INTERNAL_SERVICE_KEY mismatch. url=%s, status=%s, body=%s",
+                    spring_url,
+                    response.status_code,
+                    body_preview,
+                )
                 raise ValueError(
-                    f"리포트 저장 실패 (Spring {e.response.status_code}): {e.response.text}"
-                ) from e
-            raise
-        logger.info("Report saved to Spring: session_id=%s, risk=%s", spring_session_id, scores["risk_level"])
+                    f"Spring 내부 API 인증 실패 ({response.status_code}). INTERNAL_SERVICE_KEY 값을 확인하세요."
+                )
+
+            if 400 <= response.status_code < 500:
+                raise ValueError(
+                    f"리포트 저장 실패 (Spring {response.status_code}): {body_preview}"
+                )
+
+            if response.status_code >= 500:
+                raise RuntimeError(
+                    f"Spring 서버 오류 ({response.status_code}): {body_preview}"
+                )
+
+            logger.info("Report saved to Spring: session_id=%s, risk=%s", spring_session_id, scores["risk_level"])
+            return
+
+    if last_request_error is not None:
+        logger.error(
+            "All Spring URL candidates failed. candidates=%s, last_error=%s",
+            candidate_urls,
+            str(last_request_error),
+        )
+    raise ValueError(
+        "Spring 서버 연결 실패: 사용한 URL 후보="
+        + ", ".join(candidate_urls)
+        + " (SPRING_BASE_URL 설정과 Spring 서버 실행 상태를 확인하세요)"
+    )
 
 
 async def finalize(session_id: str, spring_session_id: int, user_id: int) -> dict:

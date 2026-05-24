@@ -5,6 +5,9 @@ from app.model.schemas import (
 )
 from app.service import chat_service
 import uuid
+import logging
+
+logger = logging.getLogger("uvicorn.error")
 
 router = APIRouter(prefix="/ai", tags=["chat"])
 
@@ -46,6 +49,20 @@ async def finalize_session(req: FinalizeRequest):
         result = await chat_service.finalize(req.session_id, req.spring_session_id, req.user_id)
         return result
     except ValueError as e:
+        logger.warning(
+            "Finalize failed (client error): session_id=%s, spring_session_id=%s, user_id=%s, error=%s",
+            req.session_id, req.spring_session_id, req.user_id, str(e)
+        )
         raise HTTPException(status_code=400, detail=str(e))
+    except RuntimeError as e:
+        logger.error(
+            "Finalize failed (server dependency error): session_id=%s, spring_session_id=%s, user_id=%s, error=%s",
+            req.session_id, req.spring_session_id, req.user_id, str(e)
+        )
+        raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
+        logger.exception(
+            "Finalize failed (unexpected): session_id=%s, spring_session_id=%s, user_id=%s",
+            req.session_id, req.spring_session_id, req.user_id
+        )
         raise HTTPException(status_code=500, detail=str(e))
