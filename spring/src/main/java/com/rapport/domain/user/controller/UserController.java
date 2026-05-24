@@ -7,6 +7,7 @@ import com.rapport.domain.booking.entity.BookingRepository;
 import com.rapport.domain.report.entity.ReportRepository;
 import com.rapport.domain.user.entity.User;
 import com.rapport.domain.user.entity.UserRepository;
+import com.rapport.domain.user.service.UserService;
 import com.rapport.global.config.UserPrincipal;
 import com.rapport.global.exception.BusinessException;
 import com.rapport.global.exception.ErrorCode;
@@ -16,6 +17,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Builder;
 import lombok.Getter;
@@ -27,6 +30,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.time.LocalDate;
 
 @Tag(name = "User", description = "회원정보 수정 및 마이페이지 API")
 @RestController
@@ -40,6 +45,7 @@ public class UserController {
     private final ReportRepository reportRepository;
     private final S3Service s3Service;
     private final AuthService authService;
+    private final UserService userService;
 
     @Operation(summary = "마이페이지 통계 조회",
                description = "상담 횟수, 리포트 수")
@@ -76,6 +82,25 @@ public class UserController {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         user.updateName(request.getName());
         return ResponseEntity.ok(ApiResponse.ok("이름이 수정되었습니다."));
+    }
+
+    @Operation(summary = "내 기본 프로필 수정",
+               description = "OAuth 신규 회원 추가 입력용. 이름/전화번호는 필수이며, 성별/생년월일은 선택입니다.")
+    @PatchMapping("/me/profile")
+    public ResponseEntity<ApiResponse<AuthDto.UserInfo>> updateMyProfile(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @Valid @RequestBody UpdateMyProfileRequest request) {
+        userService.updateMyProfile(
+                principal.getId(),
+                request.getName(),
+                request.getPhone(),
+                request.getGender(),
+                request.getBirthDate()
+        );
+        return ResponseEntity.ok(ApiResponse.ok(
+                "프로필이 수정되었습니다.",
+                authService.getMe(principal.getId())
+        ));
     }
 
     @Operation(summary = "프로필 사진 업로드")
@@ -124,6 +149,29 @@ public class UserController {
     static class UpdateNameRequest {
         @Size(max = 100, message = "이름은 100자 이내로 입력해주세요.")
         private String name;
+    }
+
+    @Getter
+    static class UpdateMyProfileRequest {
+        @NotBlank(message = "이름을 입력해주세요.")
+        @Size(max = 100, message = "이름은 100자 이내로 입력해주세요.")
+        private String name;
+
+        @NotBlank(message = "전화번호를 입력해주세요.")
+        @Pattern(regexp = "^010-\\d{4}-\\d{4}$",
+                 message = "전화번호 형식은 010-1234-5678 이어야 합니다.")
+        private String phone;
+
+        private User.Gender gender;
+        private LocalDate birthDate;
+
+        public void setName(String name) {
+            this.name = name == null ? null : name.trim();
+        }
+
+        public void setPhone(String phone) {
+            this.phone = phone == null ? null : phone.trim();
+        }
     }
 
     @Getter

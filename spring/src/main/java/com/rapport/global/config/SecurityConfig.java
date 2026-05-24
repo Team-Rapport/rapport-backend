@@ -12,6 +12,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -57,6 +58,8 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource))
             .sessionManagement(session ->
                     session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .exceptionHandling(exception -> exception
+                    .authenticationEntryPoint(unauthorizedEntryPoint()))
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers(PUBLIC_PATHS).permitAll()
                     .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
@@ -79,5 +82,11 @@ public class SecurityConfig {
             );
 
         return http.build();
+    }
+
+    @Bean
+    public AuthenticationEntryPoint unauthorizedEntryPoint() {
+        return (request, response, authException) ->
+                response.sendError(401, "Unauthorized");
     }
 }

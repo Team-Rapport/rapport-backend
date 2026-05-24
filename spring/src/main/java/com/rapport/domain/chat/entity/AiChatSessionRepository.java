@@ -13,4 +13,5 @@ public interface AiChatSessionRepository extends JpaRepository<AiChatSession, Lo
     Optional<AiChatSession> findByIdAndClientId(Long sessionId, Long clientId);
     Optional<AiChatSession> findTopByClientIdAndStatusOrderByCreatedAtDesc(
             Long clientId, AiChatSession.SessionStatus status);
+    boolean existsByClientIdAndStatus(Long clientId, AiChatSession.SessionStatus status);
 }

@@ -3,6 +3,8 @@ package com.rapport.domain.auth.service;
 import com.rapport.domain.auth.dto.AuthDto;
 import com.rapport.domain.auth.entity.RefreshToken;
 import com.rapport.domain.auth.entity.RefreshTokenRepository;
+import com.rapport.domain.chat.entity.AiChatSession;
+import com.rapport.domain.chat.entity.AiChatSessionRepository;
 import com.rapport.domain.counselor.entity.CounselorProfile;
 import com.rapport.domain.counselor.entity.CounselorProfileRepository;
 import com.rapport.domain.user.entity.User;
@@ -26,6 +28,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final CounselorProfileRepository counselorProfileRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final AiChatSessionRepository aiChatSessionRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
     private final EmailVerificationService emailVerificationService;
@@ -111,14 +114,15 @@ public class AuthService {
                 .refreshToken(refreshTokenStr)
                 .tokenType("Bearer")
                 .expiresIn(expirationMs / 1000)
-                .user(AuthDto.UserInfo.builder()
-                        .id(user.getId())
-                        .email(user.getEmail())
-                        .name(user.getName())
-                        .role(user.getRole().name())
-                        .profileImageUrl(user.getProfileImageUrl())
-                        .build())
+                .user(toUserInfo(user))
                 .build();
+    }
+
+    @Transactional(readOnly = true)
+    public AuthDto.UserInfo getMe(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        return toUserInfo(user);
     }
 
     @Transactional
@@ -175,5 +179,29 @@ public class AuthService {
         user.changePassword(passwordEncoder.encode(request.getNewPassword()));
         refreshTokenRepository.deleteAllByUserId(userId);
         log.info("Password changed: userId={}", userId);
+    }
+
+    private AuthDto.UserInfo toUserInfo(User user) {
+        boolean profileCompleted = user.getGender() != null
+                && user.getBirthDate() != null
+                && user.getPhone() != null
+                && !user.getPhone().isBlank();
+
+        boolean onboardingCompleted = user.getRole() != User.Role.CLIENT
+                || aiChatSessionRepository.existsByClientIdAndStatus(
+                        user.getId(), AiChatSession.SessionStatus.COMPLETED);
+
+        boolean isNewUser = user.getRole() == User.Role.CLIENT && !profileCompleted;
+
+        return AuthDto.UserInfo.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .name(user.getName())
+                .role(user.getRole().name())
+                .profileImageUrl(user.getProfileImageUrl())
+                .isNewUser(isNewUser)
+                .profileCompleted(profileCompleted)
+                .onboardingCompleted(onboardingCompleted)
+                .build();
     }
 }

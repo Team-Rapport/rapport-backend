@@ -1,6 +1,7 @@
 package com.rapport.domain.auth.dto;
 
 import jakarta.validation.constraints.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -62,6 +63,10 @@ public class AuthDto {
         private String name;
         private String role;
         private String profileImageUrl;
+        @JsonProperty("isNewUser")
+        private boolean isNewUser;
+        private boolean profileCompleted;
+        private boolean onboardingCompleted;
     }
 
     @Getter

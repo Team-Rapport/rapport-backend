@@ -65,11 +65,7 @@ public class AuthController {
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<AuthDto.UserInfo>> getMe(
             @AuthenticationPrincipal UserPrincipal principal) {
-        AuthDto.UserInfo userInfo = AuthDto.UserInfo.builder()
-                .id(principal.getId())
-                .email(principal.getEmail())
-                .role(principal.getRole())
-                .build();
+        AuthDto.UserInfo userInfo = authService.getMe(principal.getId());
         return ResponseEntity.ok(ApiResponse.ok(userInfo));
     }
 

@@ -146,4 +146,19 @@ public class User {
             this.name = name;
         }
     }
+
+    public void updateProfile(String name, String phone, Gender gender, LocalDate birthDate) {
+        if (name != null && !name.isBlank()) {
+            this.name = name;
+        }
+        if (phone != null && !phone.isBlank()) {
+            this.phone = phone;
+        }
+        if (gender != null) {
+            this.gender = gender;
+        }
+        if (birthDate != null) {
+            this.birthDate = birthDate;
+        }
+    }
 }
