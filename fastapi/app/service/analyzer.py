@@ -13,7 +13,7 @@ analyzer.py — 키워드/룰 기반 심리 지수 1차 산출
 """
 
 import re
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 
 # ============================================================
 # 1. 키워드 사전
@@ -121,7 +121,9 @@ NEGATION_REGEX = re.compile("|".join(NEGATION_PATTERNS))
 # 5. 점수 산출 함수
 # ============================================================
 
-def _score_category(text: str, keywords: List[Tuple[str, int]]) -> int:
+def _score_category(
+    text: str, keywords: List[Tuple[str, int]]
+) -> Dict[str, Union[int, List[str]]]:
     """
     단일 카테고리 점수 산출 (0~100).
 
@@ -129,9 +131,18 @@ def _score_category(text: str, keywords: List[Tuple[str, int]]) -> int:
     - 각 키워드 매칭마다 가중치만큼 가산점
     - 부정문 근처(±10자)에서 매칭되면 절반으로 감산
     - 로그 스케일링으로 0~100에 매핑 (포화 방지)
+
+    Returns:
+        {"score": int, "matched_keywords": List[str]}
+        matched_keywords는 중복 제거된 키워드 목록.
     """
-    raw_score = 0
+    import math
+
+    raw_score = 0.0
+    matched: List[str] = []
+
     for keyword, weight in keywords:
+        keyword_matched = False
         for match in re.finditer(re.escape(keyword), text):
             start, end = match.span()
             # 매칭 주변 ±10자 컨텍스트 추출 후 부정문 검사
@@ -140,14 +151,26 @@ def _score_category(text: str, keywords: List[Tuple[str, int]]) -> int:
                 raw_score += weight * 0.3  # 부정문이면 30%만 반영
             else:
                 raw_score += weight
+                keyword_matched = True
+        if keyword_matched:
+            matched.append(keyword)
 
     # 로그 스케일링: raw_score 15 → ~75점, 30 → ~90점
     # 0 → 0, 30+ → 100에 점근
     if raw_score <= 0:
-        return 0
-    import math
-    scaled = min(100, int(round(50 * math.log10(raw_score + 1) / math.log10(11) * 1.2)))
-    return max(0, min(100, scaled))
+        score = 0
+    else:
+        score = max(0, min(100, int(round(50 * math.log10(raw_score + 1) / math.log10(11) * 1.2))))
+
+    # matched_keywords 중복 제거 (순서 유지)
+    seen: set = set()
+    deduped: List[str] = []
+    for kw in matched:
+        if kw not in seen:
+            seen.add(kw)
+            deduped.append(kw)
+
+    return {"score": score, "matched_keywords": deduped}
 
 
 def _extract_topics(text: str) -> List[str]:
@@ -198,8 +221,11 @@ def analyze_messages(user_messages: List[str]) -> Dict:
     Returns:
         {
             "depression_score": int (0~100),
+            "depression_keywords": List[str],
             "anxiety_score": int (0~100),
+            "anxiety_keywords": List[str],
             "stress_score": int (0~100),
+            "stress_keywords": List[str],
             "topics": List[str],
             "is_crisis": bool,
             "risk_level": str ("LOW" | "MODERATE" | "HIGH" | "CRITICAL")
@@ -208,8 +234,11 @@ def analyze_messages(user_messages: List[str]) -> Dict:
     if not user_messages:
         return {
             "depression_score": 0,
+            "depression_keywords": [],
             "anxiety_score": 0,
+            "anxiety_keywords": [],
             "stress_score": 0,
+            "stress_keywords": [],
             "topics": [],
             "is_crisis": False,
             "risk_level": "LOW",
@@ -218,17 +247,25 @@ def analyze_messages(user_messages: List[str]) -> Dict:
     # 모든 발화를 하나의 텍스트로 합쳐서 분석
     full_text = " ".join(user_messages)
 
-    depression = _score_category(full_text, DEPRESSION_KEYWORDS)
-    anxiety = _score_category(full_text, ANXIETY_KEYWORDS)
-    stress = _score_category(full_text, STRESS_KEYWORDS)
+    depression_result = _score_category(full_text, DEPRESSION_KEYWORDS)
+    anxiety_result = _score_category(full_text, ANXIETY_KEYWORDS)
+    stress_result = _score_category(full_text, STRESS_KEYWORDS)
+
+    depression = depression_result["score"]
+    anxiety = anxiety_result["score"]
+    stress = stress_result["score"]
+
     topics = _extract_topics(full_text)
     is_crisis = _detect_crisis(full_text)
     risk_level = _calculate_risk_level(depression, anxiety, stress, is_crisis)
 
     return {
         "depression_score": depression,
+        "depression_keywords": depression_result["matched_keywords"],
         "anxiety_score": anxiety,
+        "anxiety_keywords": anxiety_result["matched_keywords"],
         "stress_score": stress,
+        "stress_keywords": stress_result["matched_keywords"],
         "topics": topics,
         "is_crisis": is_crisis,
         "risk_level": risk_level,
