@@ -19,9 +19,7 @@ public abstract class OAuthUserInfo {
     public abstract String getProfileImageUrl();
 }
 
-// ────────────────────────────────────────────────────────────
-// Google
-// ────────────────────────────────────────────────────────────
+// ===== Google =====
 class GoogleOAuthUserInfo extends OAuthUserInfo {
 
     public GoogleOAuthUserInfo(Map<String, Object> attributes) {
@@ -49,9 +47,7 @@ class GoogleOAuthUserInfo extends OAuthUserInfo {
     }
 }
 
-// ────────────────────────────────────────────────────────────
-// Kakao
-// ────────────────────────────────────────────────────────────
+// ===== Kakao =====
 class KakaoOAuthUserInfo extends OAuthUserInfo {
 
     public KakaoOAuthUserInfo(Map<String, Object> attributes) {

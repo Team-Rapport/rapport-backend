@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
 
-@Entity
+@Entity(name = "DirectChatRoom")
 @Table(name = "chat_rooms")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -23,9 +23,6 @@ public class ChatRoom {
     @JoinColumn(name = "counselor_id", nullable = false)
     private User counselor;
 
-    @Column(name = "is_active", nullable = false)
-    private boolean isActive = true;
-
     @Column(name = "last_message_at")
     private LocalDateTime lastMessageAt;
 
@@ -40,7 +37,7 @@ public class ChatRoom {
 
     public static ChatRoom create(User client, User counselor) {
         ChatRoom room = new ChatRoom();
-        room.client = client;
+        room.client   = client;
         room.counselor = counselor;
         return room;
     }

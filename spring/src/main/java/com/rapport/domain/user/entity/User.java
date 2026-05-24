@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLRestriction;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -29,6 +30,13 @@ public class User {
 
     @Column(nullable = false, length = 100)
     private String name;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 10)
+    private Gender gender;
+
+    @Column(name = "birth_date")
+    private LocalDate birthDate;
 
     @Column(length = 20)
     private String phone;
@@ -127,6 +135,10 @@ public class User {
 
     public enum Role {
         CLIENT, COUNSELOR, ADMIN
+    }
+
+    public enum Gender {
+        MALE, FEMALE, OTHER
     }
 
     public void updateName(String name) {

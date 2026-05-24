@@ -48,6 +48,30 @@ public enum ErrorCode {
     // Booking
     BOOKING_NOT_FOUND(HttpStatus.NOT_FOUND, "예약을 찾을 수 없습니다."),
     SCHEDULE_NOT_AVAILABLE(HttpStatus.CONFLICT, "해당 시간대는 예약이 불가합니다."),
+    BOOKING_CANCEL_NOT_ALLOWED(HttpStatus.CONFLICT, "완료·취소·거절된 예약은 취소할 수 없습니다."),
+
+    // Review
+    REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "리뷰를 찾을 수 없습니다."),
+    REVIEW_ACCESS_DENIED(HttpStatus.FORBIDDEN, "본인의 리뷰만 수정·삭제할 수 있습니다."),
+    REVIEW_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 해당 예약에 대한 리뷰가 존재합니다."),
+    BOOKING_NOT_COMPLETED(HttpStatus.BAD_REQUEST, "완료된 예약에만 리뷰를 작성할 수 있습니다."),
+
+    // Schedule Management
+    SCHEDULE_SETTINGS_ALREADY_EXISTS(HttpStatus.CONFLICT, "슬롯 설정이 이미 존재합니다. 최초 1회만 설정 가능합니다."),
+    SCHEDULE_SETTINGS_NOT_FOUND(HttpStatus.NOT_FOUND, "슬롯 설정이 없습니다. 먼저 슬롯 단위를 설정해주세요."),
+    SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 일정을 찾을 수 없습니다."),
+    PAST_DATE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "과거 날짜에는 일정을 등록할 수 없습니다."),
+    SCHEDULE_CANNOT_DELETE_ACTIVE_BOOKING(HttpStatus.CONFLICT, "PENDING 또는 ACCEPTED 예약이 있는 슬롯은 삭제할 수 없습니다."),
+    SCHEDULE_CANNOT_CLOSE_ACTIVE_BOOKING(HttpStatus.CONFLICT, "PENDING 또는 ACCEPTED 예약이 있는 슬롯이 포함되어 해당 날짜를 닫을 수 없습니다."),
+    SCHEDULE_CANNOT_DEACTIVATE_ACTIVE_BOOKING(HttpStatus.CONFLICT, "PENDING 또는 ACCEPTED 예약이 있는 슬롯은 비활성화할 수 없습니다."),
+    DAYOFF_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 브레이크타임/휴무일을 찾을 수 없습니다."),
+    COUNSELOR_SESSION_TYPE_NOT_OFFERED(HttpStatus.BAD_REQUEST, "해당 상담사가 제공하지 않는 상담 유형입니다."),
+
+    // Intake Form
+    INTAKE_FORM_NOT_FOUND(HttpStatus.NOT_FOUND, "제출된 접수면접지가 없습니다."),
+    INTAKE_FORM_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 제출된 접수면접지가 있습니다. 수정 API를 이용해주세요."),
+    INTAKE_FORM_BOOKING_NOT_ACCEPTED(HttpStatus.BAD_REQUEST, "예약 확정(ACCEPTED) 상태에서만 접수면접지를 작성할 수 있습니다."),
+    INTAKE_FORM_DEADLINE_PASSED(HttpStatus.BAD_REQUEST, "상담일 자정이 지나 접수면접지를 작성할 수 없습니다."),
 
     // File
     FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "파일 업로드에 실패했습니다."),

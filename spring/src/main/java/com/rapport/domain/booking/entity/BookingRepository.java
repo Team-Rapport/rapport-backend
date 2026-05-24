@@ -4,7 +4,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -62,4 +64,31 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     // 관리자 대시보드: 상태별 예약 수
     long countByStatus(Booking.BookingStatus status);
+
+    // ===== 슬롯 삭제/비활성화 가능 여부 확인 =====
+
+    boolean existsByScheduleIdAndStatusIn(Long scheduleId, List<Booking.BookingStatus> statuses);
+
+    long countByCounselorIdAndBookedDateAndStatusIn(Long counselorId, LocalDate bookedDate,
+                                                     List<Booking.BookingStatus> statuses);
+
+    // 통합 일간 뷰: 날짜별 활성 예약 (슬롯 ID 기준 매핑용)
+    List<Booking> findByCounselorIdAndBookedDateAndStatusIn(
+            Long counselorId, LocalDate bookedDate, List<Booking.BookingStatus> statuses);
+
+    // slotUnit 변경 시 마지막 예약 날짜 조회
+    @Query("SELECT MAX(b.bookedDate) FROM Booking b WHERE b.counselor.id = :counselorId " +
+           "AND b.bookedDate >= :from AND b.status IN :statuses")
+    Optional<LocalDate> findMaxBookedDate(@Param("counselorId") Long counselorId,
+                                          @Param("from") LocalDate from,
+                                          @Param("statuses") List<Booking.BookingStatus> statuses);
+
+    @Query("SELECT b.schedule.id FROM Booking b " +
+           "WHERE b.schedule.counselor.id = :counselorId " +
+           "AND b.schedule.slotDate BETWEEN :start AND :end " +
+           "AND b.status IN :statuses")
+    List<Long> findScheduleIdsWithActiveBookings(@Param("counselorId") Long counselorId,
+                                                  @Param("start") LocalDate start,
+                                                  @Param("end") LocalDate end,
+                                                  @Param("statuses") List<Booking.BookingStatus> statuses);
 }

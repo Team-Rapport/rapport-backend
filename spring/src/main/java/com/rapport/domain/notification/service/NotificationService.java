@@ -54,4 +54,18 @@ public class NotificationService {
                 clientName + " 님이 예약을 취소했습니다.",
                 "BOOKING", bookingId);
     }
+
+    public void notifyIntakeFormRequested(User client, Long bookingId, String counselorName) {
+        send(client, Notification.NotificationType.INTAKE_FORM_REQUESTED,
+                "접수면접지 작성 요청",
+                counselorName + " 상담사님이 접수면접지 작성을 요청했습니다.",
+                "BOOKING", bookingId);
+    }
+
+    public void notifyIntakeFormSubmitted(User counselor, Long intakeFormId, String clientName) {
+        send(counselor, Notification.NotificationType.INTAKE_FORM_SUBMITTED,
+                "접수면접지 제출",
+                clientName + " 님이 접수면접지를 제출했습니다.",
+                "INTAKE_FORM", intakeFormId);
+    }
 }

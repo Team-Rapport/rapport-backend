@@ -23,9 +23,7 @@ public class ChatService {
     private final ChatMessageRepository chatMessageRepository;
     private final UserRepository userRepository;
 
-    // ──────────────────────────────────────────────
-    // 채팅방 생성 (예약 확정 시 bookingId 포함, 수동 생성 시 null)
-    // ──────────────────────────────────────────────
+    // ===== 채팅방 생성 =====
 
     @Transactional
     public ChatMessageDto.RoomResponse createRoom(Long clientId, Long counselorId, Long bookingId) {
@@ -35,9 +33,7 @@ public class ChatService {
         return new ChatMessageDto.RoomResponse(chatRoomRepository.save(room));
     }
 
-    // ──────────────────────────────────────────────
-    // 메시지 저장 및 브로드캐스트용 DTO 반환
-    // ──────────────────────────────────────────────
+    // ===== 메시지 저장 =====
 
     @Transactional
     public ChatMessageDto.Response saveMessage(Long roomId, Long senderId,
@@ -54,9 +50,7 @@ public class ChatService {
         return new ChatMessageDto.Response(chatMessageRepository.save(message));
     }
 
-    // ──────────────────────────────────────────────
-    // 메시지 히스토리 조회 (최신 50건, 오래된 순 정렬)
-    // ──────────────────────────────────────────────
+    // ===== 메시지 히스토리 조회 =====
 
     @Transactional(readOnly = true)
     public ChatMessageDto.HistoryResponse getHistory(Long roomId, Long requesterId) {
@@ -72,9 +66,7 @@ public class ChatService {
         return new ChatMessageDto.HistoryResponse(roomId, messages);
     }
 
-    // ──────────────────────────────────────────────
-    // 내 채팅방 목록 조회
-    // ──────────────────────────────────────────────
+    // ===== 내 채팅방 목록 조회 =====
 
     @Transactional(readOnly = true)
     public List<ChatMessageDto.RoomResponse> getMyRooms(Long userId) {
@@ -84,9 +76,7 @@ public class ChatService {
                 .toList();
     }
 
-    // ──────────────────────────────────────────────
-    // 내부 유틸리티
-    // ──────────────────────────────────────────────
+    // ===== 내부 유틸 =====
 
     private ChatRoom getRoom(Long roomId) {
         return chatRoomRepository.findById(roomId)

@@ -11,7 +11,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
 
     Optional<ChatRoom> findByClientIdAndCounselorId(Long clientId, Long counselorId);
 
-    @Query("SELECT r FROM ChatRoom r WHERE r.client.id = :userId OR r.counselor.id = :userId " +
+    @Query("SELECT r FROM DirectChatRoom r WHERE r.client.id = :userId OR r.counselor.id = :userId " +
            "ORDER BY r.lastMessageAt DESC NULLS LAST")
     List<ChatRoom> findAllByUserId(Long userId);
 }
