@@ -38,6 +38,21 @@ class ReportScores(BaseModel):
     stress: int = Field(..., ge=0, le=100)
 
 
+class ScoreBasisItem(BaseModel):
+    """단일 지표(우울/불안/스트레스)의 점수 산출 근거."""
+    keyword_score: int
+    llm_score: int | None
+    matched_keywords: list[str]
+    rationale: str | None
+
+
+class ScoreBasis(BaseModel):
+    """세 지표 전체의 점수 산출 근거 블록."""
+    depression: ScoreBasisItem
+    anxiety: ScoreBasisItem
+    stress: ScoreBasisItem
+
+
 class ReportResponse(BaseModel):
     """
     AI 사전 점검 리포트 응답.
@@ -50,6 +65,7 @@ class ReportResponse(BaseModel):
     - recommended_specializations → 상담사 매칭용
 
     summary 필드는 NER 마스킹 단계에서 추가 예정 (현재 미포함).
+    score_basis 필드: 각 지표의 keyword_score, llm_score, matched_keywords, rationale 포함.
     """
     session_id: str
     scores: ReportScores
@@ -60,3 +76,4 @@ class ReportResponse(BaseModel):
     disclaimer: str = (
         "본 결과는 의학적 진단이 아니며, 상담 전 사전 점검 참고용입니다."
     )
+    score_basis: ScoreBasis | None = None

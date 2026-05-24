@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Getter;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 public class ReportDto {
 
@@ -20,6 +21,7 @@ public class ReportDto {
         @NotNull @Min(0) @Max(100) private Integer stressScore;
         @NotNull private Report.RiskLevel riskLevel;
         private String summary;
+        private Map<String, Object> scoreBasis;
         private List<String> reportKeywords;
         private List<String> recommendedSpecializations;
         @JsonProperty("isCrisisDetected")
@@ -67,6 +69,7 @@ public class ReportDto {
         private Integer stressScore;
         private Report.RiskLevel riskLevel;
         private String summary;
+        private Map<String, Object> scoreBasis;
         private List<String> reportKeywords;
         private List<String> recommendedSpecializations;
         @JsonProperty("isCrisisDetected")

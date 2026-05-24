@@ -156,18 +156,31 @@ TURN_STAGE_PROMPTS = {
 - 한 턴에 한 가지 주제만 묻는다.
 - 이전 턴에서 이미 충분히 다룬 영역은 건너뛴다.""",
 
-    # ── 턴 8~9: 심화 + 정리 ──
-    "deepening": """═══ 현재 단계: 심화 및 정리 (턴 {turn}/{max}) ═══
-대화가 거의 마무리 단계이다.
+    # ── 턴 8: 이전 주제 심화 ──
+    "deepening": """═══ 현재 단계: 심화 (턴 {turn}/{max}) ═══
+직전 사용자 발화에서 가장 중요한 내용을 이어서 깊이 탐색하는 단계이다.
 
 할 일:
-- 아직 다루지 못한 주제 영역이 있다면 하나만 가볍게 물어본다.
-- 사용자가 스스로 자기 상태를 어떻게 인식하는지 열린 질문을 한다.
-  (예: "혹시 요즘 본인 상태에 대해 스스로 느끼시는 게 있으세요?")
-- 추가로 하고 싶은 말이 있는지 확인한다.
+- 직전 발화에서 드러난 핵심 감정이나 상황에 공감을 먼저 표현한다.
+  (예: "그 상황이 많이 힘드셨겠어요.")
+- 같은 주제에 대해 구체적으로 더 알 수 있는 심화 질문을 한다.
+  (예: "그때 어떤 감정이 가장 컸는지 조금 더 이야기해 주실 수 있을까요?")
 
 주의사항:
-- 새로운 무거운 주제를 꺼내지 않는다. 정리하는 톤을 유지한다.""",
+- 새로운 주제를 꺼내지 않는다. 이전 흐름을 그대로 이어간다.
+- 공감 1문장 + 심화 질문 1문장, 총 2문장으로 작성한다.""",
+
+    # ── 턴 9: 자유 발화 유도 ──
+    "deepening_invite": """═══ 현재 단계: 자유 발화 유도 (턴 {turn}/{max}) ═══
+사용자가 하고 싶은 말을 자유롭게 꺼낼 수 있도록 공간을 열어주는 단계이다.
+
+할 일:
+- 지금까지 나눈 대화에 대해 따뜻하게 공감을 한 문장으로 표현한다.
+- "이 주제와 관련해서 추가로 말씀해 주고 싶은 것이 있으신가요?" 형식의 열린 질문을 한다.
+
+주의사항:
+- 새로운 주제나 심층 탐색은 하지 않는다.
+- 사용자가 부담 없이 마무리할 수 있도록 가볍고 따뜻한 톤을 유지한다.""",
 
     # ── 턴 10: 마무리 ──
     "closing": """═══ 현재 단계: 마무리 (턴 {turn}/{max}) ═══
@@ -212,8 +225,10 @@ def _get_stage(turn: int) -> str:
         return "rapport"
     elif turn <= 7:
         return "exploration"
-    elif turn <= 9:
+    elif turn == 8:
         return "deepening"
+    elif turn == 9:
+        return "deepening_invite"
     else:
         return "closing"
 
@@ -315,17 +330,25 @@ async def _post_report_to_spring(spring_session_id: int, user_id: int, scores: d
         "stressScore": scores["stress_score"],
         "riskLevel": scores["risk_level"],
         "summary": scores.get("summary"),
+        "scoreBasis": scores.get("score_basis"),
         "reportKeywords": scores["topics"],
         "recommendedSpecializations": scores["recommended_specializations"],
         "isCrisisDetected": scores["is_crisis"],
     }
+    spring_url = f"{settings.spring_base_url.rstrip('/')}/api/v1/reports/internal"
     async with httpx.AsyncClient() as http:
-        response = await http.post(
-            f"{settings.spring_base_url}/api/v1/reports/internal",
-            json=payload,
-            headers={"X-Service-Key": settings.internal_service_key},
-            timeout=10.0,
-        )
+        try:
+            response = await http.post(
+                spring_url,
+                json=payload,
+                headers={"X-Service-Key": settings.internal_service_key},
+                timeout=10.0,
+            )
+        except httpx.RequestError as e:
+            raise ValueError(
+                f"Spring 서버 연결 실패: {settings.spring_base_url} "
+                "(SPRING_BASE_URL 설정과 Spring 서버 실행 상태를 확인하세요)"
+            ) from e
         try:
             response.raise_for_status()
         except httpx.HTTPStatusError as e:

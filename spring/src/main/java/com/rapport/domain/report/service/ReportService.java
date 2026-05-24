@@ -43,6 +43,7 @@ public class ReportService {
                 session, client,
                 request.getDepressionScore(), request.getAnxietyScore(), request.getStressScore(),
                 request.getRiskLevel(), request.getSummary(),
+                request.getScoreBasis(),
                 request.getReportKeywords(), request.getRecommendedSpecializations(),
                 request.isCrisisDetected()
         );
@@ -72,6 +73,7 @@ public class ReportService {
                 session, client,
                 request.getDepressionScore(), request.getAnxietyScore(), request.getStressScore(),
                 request.getRiskLevel(), request.getSummary(),
+                null,
                 request.getReportKeywords(), request.getRecommendedSpecializations(),
                 request.isCrisisDetected()
         );
@@ -132,6 +134,7 @@ public class ReportService {
                 .stressScore(r.getStressScore())
                 .riskLevel(r.getRiskLevel())
                 .summary(r.getSummary())
+                .scoreBasis(r.getScoreBasis())
                 .reportKeywords(r.getReportKeywords())
                 .recommendedSpecializations(r.getRecommendedSpecializations())
                 .crisisDetected(r.isCrisisDetected())

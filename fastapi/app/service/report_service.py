@@ -35,12 +35,18 @@ LLM_WEIGHT = 0.6
 # ============================================================
 
 SUMMARY_SYSTEM_PROMPT = """너는 심리상담 전 사전 점검 대화를 분석하는 평가자야.
-사용자의 발화 전체를 읽고, 내담자의 현재 심리 상태를 1~2문장으로 요약해.
+사용자의 발화 전체를 읽고, 내담자의 심리 상태를 상담사가 바로 파악할 수 있도록 2~4문장으로 요약해.
+
+요약 구성 (아래 세 요소를 자연스럽게 포함할 것):
+1. 주요 호소 내용: 내담자가 가장 많이 언급하거나 강조한 어려움
+2. 감정 상태: 대화에서 관찰된 주된 감정 (우울, 불안, 무기력, 분노 등)
+3. 주요 언급 주제: 수면, 업무/학업, 대인관계, 건강, 금전 등에서 드러난 핵심 영역
 
 요약 지침:
 - 관찰된 사실(발화 내용)에 근거해서만 작성한다.
-- 진단·처방·판단 언어 사용 금지. ("우울증이다" X → "우울감을 호소했다" O)
-- 한국어, 3인칭 서술체, 100자 이내.
+- 진단·처방·판단 언어 사용 금지. ("우울증이다" X → "우울감을 호소하였다" O)
+- 한국어, 3인칭 서술체. 주어는 반드시 "사용자"로 표현한다. ("내담자" 사용 금지)
+- 2문장 이상 4문장 이하로 작성한다.
 
 출력: 요약 텍스트만 (JSON, 헤더, 불릿 금지)"""
 
@@ -70,6 +76,23 @@ SCORING_SYSTEM_PROMPT = """너는 심리상담 전 사전 점검 대화를 분�
   "anxiety": <int>,
   "stress": <int>,
   "recommended_specializations": [<string>, ...]
+}"""
+
+RATIONALE_SYSTEM_PROMPT = """너는 심리상담 전 사전 점검 대화를 분석하는 평가자야.
+사용자의 발화와 산출된 점수 정보를 바탕으로, 각 지표의 점수가 왜 그렇게 나왔는지 근거를 설명해줘.
+
+지침:
+- 우울(depression), 불안(anxiety), 스트레스(stress) 각각 1~2문장으로 작성
+- 관찰된 발화 내용 기반으로만 서술 (추측/진단 금지)
+- "~을 호소하였다", "~이 관찰되었다" 같은 서술체 사용
+- 진단·처방 언어 금지
+- 주어는 반드시 "사용자"로 표현한다. ("내담자" 사용 금지)
+
+출력 형식 (JSON only):
+{
+  "depression_rationale": "...",
+  "anxiety_rationale": "...",
+  "stress_rationale": "..."
 }"""
 
 
@@ -127,6 +150,57 @@ async def _llm_summary(user_messages: List[str]) -> str:
     return response.choices[0].message.content.strip()
 
 
+async def _llm_rationale(
+    user_messages: List[str],
+    scores: Dict,
+) -> Dict:
+    """
+    GPT-4o를 호출해 각 지표 점수의 근거를 생성.
+
+    Args:
+        user_messages: 사용자 발화 목록
+        scores: {"depression": int, "anxiety": int, "stress": int} 포함 dict
+
+    Returns:
+        {"depression_rationale": str, "anxiety_rationale": str, "stress_rationale": str}
+
+    Raises:
+        Exception: LLM 호출 실패 또는 JSON 파싱 실패 시
+    """
+    user_text = "\n".join(f"- {msg}" for msg in user_messages)
+    score_info = (
+        f"우울 점수: {scores['depression']}, "
+        f"불안 점수: {scores['anxiety']}, "
+        f"스트레스 점수: {scores['stress']}"
+    )
+
+    response = await client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": RATIONALE_SYSTEM_PROMPT},
+            {
+                "role": "user",
+                "content": (
+                    f"다음은 내담자의 발화야:\n{user_text}\n\n"
+                    f"산출된 점수 정보: {score_info}"
+                ),
+            },
+        ],
+        max_tokens=400,
+        temperature=0.3,
+        response_format={"type": "json_object"},
+    )
+
+    raw = response.choices[0].message.content
+    parsed = json.loads(raw)
+
+    return {
+        "depression_rationale": parsed.get("depression_rationale"),
+        "anxiety_rationale": parsed.get("anxiety_rationale"),
+        "stress_rationale": parsed.get("stress_rationale"),
+    }
+
+
 def _clamp(value, lo: int = 0, hi: int = 100) -> int:
     """정수로 변환 후 0~100 범위로 클램핑."""
     try:
@@ -174,6 +248,7 @@ async def generate_scores(user_messages: List[str]) -> Dict:
     3. 가중평균 융합 (LLM 실패 시 키워드 점수만 사용)
     4. 위험도 재계산
     5. 요약 생성 (실패 시 None)
+    6. rationale 생성 (실패 시 None)
 
     Returns:
         {
@@ -185,10 +260,25 @@ async def generate_scores(user_messages: List[str]) -> Dict:
             "topics": List[str],
             "recommended_specializations": List[str],
             "summary": str | None,
+            "score_basis": {
+                "depression": {
+                    "keyword_score": int,
+                    "llm_score": int | None,
+                    "matched_keywords": List[str],
+                    "rationale": str | None,
+                },
+                "anxiety": { ... },
+                "stress": { ... },
+            }
         }
     """
     # 1단계: 키워드 분석
     keyword_result = analyze_messages(user_messages)
+
+    # 퓨전 전 keyword_score 보존
+    kw_depression: int = keyword_result["depression_score"]
+    kw_anxiety: int = keyword_result["anxiety_score"]
+    kw_stress: int = keyword_result["stress_score"]
 
     # 2단계: LLM 분석 (실패 시 fallback)
     llm_result = None
@@ -199,16 +289,21 @@ async def generate_scores(user_messages: List[str]) -> Dict:
             "LLM scoring failed, falling back to keyword-only: %s", e
         )
 
+    # 퓨전 전 llm_score 보존
+    llm_depression: int | None = llm_result["depression"] if llm_result else None
+    llm_anxiety: int | None = llm_result["anxiety"] if llm_result else None
+    llm_stress: int | None = llm_result["stress"] if llm_result else None
+
     # 3단계: 융합
     if llm_result is not None:
-        depression = _fuse(keyword_result["depression_score"], llm_result["depression"])
-        anxiety = _fuse(keyword_result["anxiety_score"], llm_result["anxiety"])
-        stress = _fuse(keyword_result["stress_score"], llm_result["stress"])
+        depression = _fuse(kw_depression, llm_result["depression"])
+        anxiety = _fuse(kw_anxiety, llm_result["anxiety"])
+        stress = _fuse(kw_stress, llm_result["stress"])
         recommended = llm_result["recommended_specializations"]
     else:
-        depression = keyword_result["depression_score"]
-        anxiety = keyword_result["anxiety_score"]
-        stress = keyword_result["stress_score"]
+        depression = kw_depression
+        anxiety = kw_anxiety
+        stress = kw_stress
         recommended = []
 
     # 4단계: 위험도 재계산 (위기 감지는 키워드 결과 신뢰)
@@ -222,6 +317,37 @@ async def generate_scores(user_messages: List[str]) -> Dict:
     except Exception as e:
         logger.warning("Summary generation failed: %s", e)
 
+    # 6단계: rationale 생성
+    rationale_result = None
+    try:
+        rationale_result = await _llm_rationale(
+            user_messages,
+            {"depression": depression, "anxiety": anxiety, "stress": stress},
+        )
+    except Exception as e:
+        logger.warning("Rationale generation failed: %s", e)
+
+    score_basis = {
+        "depression": {
+            "keyword_score": kw_depression,
+            "llm_score": llm_depression,
+            "matched_keywords": keyword_result["depression_keywords"],
+            "rationale": rationale_result["depression_rationale"] if rationale_result else None,
+        },
+        "anxiety": {
+            "keyword_score": kw_anxiety,
+            "llm_score": llm_anxiety,
+            "matched_keywords": keyword_result["anxiety_keywords"],
+            "rationale": rationale_result["anxiety_rationale"] if rationale_result else None,
+        },
+        "stress": {
+            "keyword_score": kw_stress,
+            "llm_score": llm_stress,
+            "matched_keywords": keyword_result["stress_keywords"],
+            "rationale": rationale_result["stress_rationale"] if rationale_result else None,
+        },
+    }
+
     return {
         "depression_score": depression,
         "anxiety_score": anxiety,
@@ -231,4 +357,5 @@ async def generate_scores(user_messages: List[str]) -> Dict:
         "topics": keyword_result["topics"],
         "recommended_specializations": recommended,
         "summary": summary,
+        "score_basis": score_basis,
     }
