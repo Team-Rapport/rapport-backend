@@ -1,7 +1,13 @@
 package com.rapport.domain.booking.service;
 
 import com.rapport.domain.booking.dto.BookingDto;
-import com.rapport.domain.booking.entity.*;
+import com.rapport.domain.booking.entity.Booking;
+import com.rapport.domain.booking.entity.BookingRepository;
+import com.rapport.domain.booking.entity.CounselorSchedule;
+import com.rapport.domain.booking.entity.CounselorScheduleRepository;
+import com.rapport.domain.booking.entity.CounselorSessionTypeRepository;
+import com.rapport.domain.booking.entity.SessionType;
+import com.rapport.domain.booking.entity.SessionTypeRepository;
 import com.rapport.domain.notification.service.NotificationService;
 import com.rapport.domain.report.entity.Report;
 import com.rapport.domain.report.entity.ReportRepository;
