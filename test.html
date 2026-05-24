@@ -157,6 +157,8 @@
 <div class="card">
   <div class="row">
     <button onclick="createSession()">1. 세션 생성</button>
+    <label>Spring Session ID:</label>
+    <input type="number" id="spring-session-id" value="1" style="width:80px; padding:8px; border:1px solid #ddd; border-radius:8px; font-size:14px;">
     <button class="danger" onclick="finalize()" id="btn-finalize" disabled>3. Finalize (리포트 생성)</button>
     <button class="secondary" onclick="resetAll()">초기화</button>
   </div>
@@ -280,10 +282,11 @@ async function finalize() {
   document.getElementById('chat-error').textContent = '리포트 생성 중... (LLM 호출 약 3~5초 소요)';
 
   try {
+    const springSessionId = parseInt(document.getElementById('spring-session-id').value) || 1;
     const res = await fetch(getServerUrl() + '/ai/finalize', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({session_id: sessionId, user_id: userId}),
+      body: JSON.stringify({session_id: sessionId, spring_session_id: springSessionId, user_id: userId}),
     });
     if (!res.ok) throw new Error('HTTP ' + res.status + ' — ' + await res.text());
     const data = await res.json();
