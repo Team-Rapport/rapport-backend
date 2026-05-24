@@ -9,6 +9,7 @@ import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Entity
 @Table(name = "reports")
@@ -45,6 +46,10 @@ public class Report {
     private String summary;
 
     @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "score_basis", columnDefinition = "json")
+    private Map<String, Object> scoreBasis;
+
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "report_keywords", columnDefinition = "json")
     private List<String> reportKeywords;
 
@@ -79,6 +84,7 @@ public class Report {
     public static Report create(AiChatSession session, User client,
                                  int depressionScore, int anxietyScore, int stressScore,
                                  RiskLevel riskLevel, String summary,
+                                 Map<String, Object> scoreBasis,
                                  List<String> keywords, List<String> specializations,
                                  boolean isCrisisDetected) {
         Report report = new Report();
@@ -89,6 +95,7 @@ public class Report {
         report.stressScore = stressScore;
         report.riskLevel = riskLevel;
         report.summary = summary;
+        report.scoreBasis = scoreBasis;
         report.reportKeywords = keywords;
         report.recommendedSpecializations = specializations;
         report.isCrisisDetected = isCrisisDetected;
