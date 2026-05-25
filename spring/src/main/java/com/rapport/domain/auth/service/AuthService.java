@@ -24,6 +24,8 @@ import java.time.LocalDateTime;
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+    private static final String DEFAULT_PENDING_LICENSE_TYPE = "UNSPECIFIED";
+
 
     private final UserRepository userRepository;
     private final CounselorProfileRepository counselorProfileRepository;
@@ -53,7 +55,7 @@ public class AuthService {
         // CounselorProfile 생성 (PENDING 상태)
         CounselorProfile profile = CounselorProfile.create(
                 user,
-                request.getLicenseType(),
+                normalizeLicenseType(request.getLicenseType()),
                 request.getLicenseNumber(),
                 CounselorProfile.CounselorGender.ANY
         );
@@ -203,5 +205,12 @@ public class AuthService {
                 .profileCompleted(profileCompleted)
                 .onboardingCompleted(onboardingCompleted)
                 .build();
+    }
+
+    private String normalizeLicenseType(String requested) {
+        if (requested == null || requested.isBlank()) {
+            return DEFAULT_PENDING_LICENSE_TYPE;
+        }
+        return requested.trim();
     }
 }

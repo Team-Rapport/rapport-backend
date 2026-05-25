@@ -55,12 +55,15 @@ public class EmailVerificationService {
 
     @Transactional(readOnly = true)
     public void checkVerified(String email) {
-        boolean verified = emailVerificationRepository
+        EmailVerification verification = emailVerificationRepository
                 .findTopByEmailOrderByCreatedAtDesc(email)
-                .map(EmailVerification::isVerified)
-                .orElse(false);
+                .orElseThrow(() -> new BusinessException(ErrorCode.EMAIL_VERIFICATION_NOT_FOUND));
 
-        if (!verified) {
+        if (verification.isExpired()) {
+            throw new BusinessException(ErrorCode.EMAIL_VERIFICATION_EXPIRED);
+        }
+
+        if (!verification.isVerified()) {
             throw new BusinessException(ErrorCode.EMAIL_NOT_VERIFIED);
         }
     }

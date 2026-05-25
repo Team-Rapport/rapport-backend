@@ -6,6 +6,9 @@ import com.rapport.domain.auth.service.EmailVerificationService;
 import com.rapport.global.config.UserPrincipal;
 import com.rapport.global.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -28,7 +31,31 @@ public class AuthController {
      * 상담사 회원가입 (이메일/비밀번호)
      * 내담자는 소셜 로그인 전용이므로 이 엔드포인트는 상담사 전용
      */
-    @Operation(summary = "상담사 회원가입", description = "상담사 계정 생성. 가입 후 PENDING 상태로 심사 대기.")
+    @Operation(summary = "상담사 회원가입", description = """
+            상담사 계정 생성(기본 계정 정보 단계).
+            필수: email, password, name
+            선택(하위호환): licenseType, licenseNumber
+            가입 후 계정/프로필은 PENDING 상태로 심사 대기입니다.
+            """)
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "회원가입 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "이메일 인증 미완료/만료 또는 입력값 오류",
+                    content = @Content(examples = {
+                            @ExampleObject(name = "미인증", value = "{\"success\":false,\"message\":\"이메일 인증이 완료되지 않았습니다.\"}"),
+                            @ExampleObject(name = "인증만료", value = "{\"success\":false,\"message\":\"인증 코드가 만료되었습니다.\"}")
+                    })
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "이메일 인증 요청 없음",
+                    content = @Content(examples = @ExampleObject(
+                            value = "{\"success\":false,\"message\":\"이메일 인증 요청을 찾을 수 없습니다.\"}"
+                    ))
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "이미 사용 중인 이메일")
+    })
     @PostMapping("/counselor/signup")
     public ResponseEntity<ApiResponse<AuthDto.TokenResponse>> counselorSignup(
             @Valid @RequestBody AuthDto.CounselorSignupRequest request) {

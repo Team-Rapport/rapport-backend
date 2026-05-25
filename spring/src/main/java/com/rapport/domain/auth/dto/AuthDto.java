@@ -29,7 +29,7 @@ public class AuthDto {
         @Pattern(regexp = "^[가-힣a-zA-Z\\s]+$", message = "이름 형식이 올바르지 않습니다.")
         private String name;
 
-        @NotBlank(message = "자격증 종류를 입력해주세요.")
+        // 하위 호환: 기존 클라이언트가 보내더라도 허용 (자격 단계에서 별도 관리)
         private String licenseType;
 
         private String licenseNumber;
