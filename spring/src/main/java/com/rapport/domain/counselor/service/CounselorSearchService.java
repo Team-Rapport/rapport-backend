@@ -1,5 +1,8 @@
 package com.rapport.domain.counselor.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rapport.domain.booking.entity.CounselorSessionTypeRepository;
 import com.rapport.domain.counselor.dto.CounselorProfileDto;
 import com.rapport.domain.counselor.entity.CounselorProfile;
 import jakarta.persistence.EntityManager;
@@ -10,7 +13,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -18,6 +23,8 @@ public class CounselorSearchService {
 
     @PersistenceContext
     private EntityManager em;
+    private final CounselorSessionTypeRepository counselorSessionTypeRepository;
+    private final ObjectMapper objectMapper;
 
     @Transactional(readOnly = true)
     public List<CounselorProfileDto.PublicProfileResponse> search(
@@ -100,18 +107,72 @@ public class CounselorSearchService {
         @SuppressWarnings("unchecked")
         List<Object[]> rows = query.getResultList();
 
-        return rows.stream().map(row -> CounselorProfileDto.PublicProfileResponse.builder()
-                .userId(((Number) row[1]).longValue())
-                .licenseType((String) row[2])
-                .counselorGender(CounselorProfile.CounselorGender.valueOf((String) row[3]))
-                .bio((String) row[6])
-                .experienceYears(row[7] != null ? ((Number) row[7]).intValue() : null)
-                .averageRating(row[8] != null ? new BigDecimal(row[8].toString()) : null)
-                .reviewCount(row[9] != null ? ((Number) row[9]).intValue() : 0)
-                .approvalStatus(CounselorProfile.ApprovalStatus.valueOf((String) row[10]))
-                .name((String) row[12])
-                .profileImageUrl((String) row[14])
-                .build()
-        ).toList();
+        List<Long> counselorIds = rows.stream()
+                .map(row -> ((Number) row[1]).longValue())
+                .toList();
+        Map<Long, Integer> minPriceMap = getMinPriceMap(counselorIds);
+        Map<Long, List<CounselorProfileDto.ConsultationMode>> modeMap = getConsultationModeMap(counselorIds);
+
+        return rows.stream().map(row -> {
+            Long counselorId = ((Number) row[1]).longValue();
+            return CounselorProfileDto.PublicProfileResponse.builder()
+                    .userId(counselorId)
+                    .licenseType((String) row[2])
+                    .counselorGender(CounselorProfile.CounselorGender.valueOf((String) row[3]))
+                    .specializations(parseJsonArray(row[4]))
+                    .approaches(parseJsonArray(row[5]))
+                    .consultationModes(modeMap.getOrDefault(counselorId, List.of()))
+                    .minPrice(minPriceMap.get(counselorId))
+                    .bio((String) row[6])
+                    .experienceYears(row[7] != null ? ((Number) row[7]).intValue() : null)
+                    .averageRating(row[8] != null ? new BigDecimal(row[8].toString()) : null)
+                    .reviewCount(row[9] != null ? ((Number) row[9]).intValue() : 0)
+                    .approvalStatus(CounselorProfile.ApprovalStatus.valueOf((String) row[10]))
+                    .name((String) row[12])
+                    .profileImageUrl((String) row[14])
+                    .build();
+        }).toList();
+    }
+
+    private Map<Long, Integer> getMinPriceMap(List<Long> counselorIds) {
+        if (counselorIds == null || counselorIds.isEmpty()) return Map.of();
+        Map<Long, Integer> result = new HashMap<>();
+        for (Object[] row : counselorSessionTypeRepository.findMinPriceByCounselorIds(counselorIds)) {
+            result.put(((Number) row[0]).longValue(), ((Number) row[1]).intValue());
+        }
+        return result;
+    }
+
+    private Map<Long, List<CounselorProfileDto.ConsultationMode>> getConsultationModeMap(List<Long> counselorIds) {
+        if (counselorIds == null || counselorIds.isEmpty()) return Map.of();
+        Map<Long, List<CounselorProfileDto.ConsultationMode>> result = new HashMap<>();
+        for (Object[] row : counselorSessionTypeRepository.findSessionTypeNamesByCounselorIds(counselorIds)) {
+            Long counselorId = ((Number) row[0]).longValue();
+            CounselorProfileDto.ConsultationMode mode = toConsultationMode(String.valueOf(row[1]));
+            if (mode == null) continue;
+            result.computeIfAbsent(counselorId, k -> new ArrayList<>());
+            if (!result.get(counselorId).contains(mode)) {
+                result.get(counselorId).add(mode);
+            }
+        }
+        return result;
+    }
+
+    private CounselorProfileDto.ConsultationMode toConsultationMode(String sessionType) {
+        if (sessionType == null) return null;
+        return switch (sessionType) {
+            case "MEETING" -> CounselorProfileDto.ConsultationMode.FACE_TO_FACE;
+            case "CHAT", "CALL", "VIDEOCALL" -> CounselorProfileDto.ConsultationMode.ONLINE;
+            default -> null;
+        };
+    }
+
+    private List<String> parseJsonArray(Object value) {
+        if (value == null) return List.of();
+        try {
+            return objectMapper.readValue(String.valueOf(value), new TypeReference<>() {});
+        } catch (Exception e) {
+            return List.of();
+        }
     }
 }
