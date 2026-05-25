@@ -27,6 +27,16 @@ SET @before_reviews = (
     SELECT COUNT(*) FROM reviews
     WHERE content LIKE '[SEED]%'
 );
+SET @before_schedule_settings = (
+    SELECT COUNT(*) FROM counselor_schedule_settings css
+    JOIN users u ON u.id = css.counselor_id
+    WHERE u.email LIKE 'seed.counselor%@rapport.local'
+);
+SET @before_schedules = (
+    SELECT COUNT(*) FROM counselor_schedules cs
+    JOIN users u ON u.id = cs.counselor_id
+    WHERE u.email LIKE 'seed.counselor%@rapport.local'
+);
 
 -- ============================================================
 -- 1) Seed counselor users (10)
@@ -133,7 +143,105 @@ WHERE NOT EXISTS (
 );
 
 -- ============================================================
--- 4) Optional review seed (clients + completed bookings + reviews)
+-- 4) Schedule settings + available schedules seed
+-- ============================================================
+
+-- 4-1) counselor_schedule_settings (slot_unit: 60)
+INSERT INTO counselor_schedule_settings (counselor_id, slot_unit, created_at, updated_at)
+SELECT u.id, 60, NOW(), NOW()
+FROM users u
+WHERE u.email LIKE 'seed.counselor%@rapport.local'
+  AND NOT EXISTS (
+      SELECT 1 FROM counselor_schedule_settings css
+      WHERE css.counselor_id = u.id
+  );
+
+-- 4-1-a) 일부 상담사는 30분 슬롯으로 설정
+-- 요청 반영: seed.counselor01~03 은 slot_unit=30
+UPDATE counselor_schedule_settings css
+JOIN users u ON u.id = css.counselor_id
+SET css.slot_unit = 30,
+    css.updated_at = NOW()
+WHERE u.email IN (
+    'seed.counselor01@rapport.local',
+    'seed.counselor02@rapport.local',
+    'seed.counselor03@rapport.local'
+)
+  AND css.slot_unit <> 30;
+
+-- 4-2) counselor_schedules (이번 주 평일 10:00~17:00, 점심 제외)
+-- session_type: CALL, MEETING
+-- 슬롯: 10-11, 11-12, 13-14, 14-15, 15-16, 16-17 (하루 6개 * 5일 * 2타입 = 60개/상담사)
+INSERT INTO counselor_schedules (
+    counselor_id, session_type_id, slot_date, start_time, end_time, is_available, created_at, updated_at, version
+)
+SELECT u.id, st.id, d.slot_date, t.start_time, t.end_time, 1, NOW(), NOW(), 0
+FROM users u
+JOIN (
+    SELECT CURDATE() + INTERVAL (0 - WEEKDAY(CURDATE())) DAY AS slot_date UNION ALL
+    SELECT CURDATE() + INTERVAL (1 - WEEKDAY(CURDATE())) DAY UNION ALL
+    SELECT CURDATE() + INTERVAL (2 - WEEKDAY(CURDATE())) DAY UNION ALL
+    SELECT CURDATE() + INTERVAL (3 - WEEKDAY(CURDATE())) DAY UNION ALL
+    SELECT CURDATE() + INTERVAL (4 - WEEKDAY(CURDATE())) DAY
+) d
+JOIN (
+    SELECT '10:00:00' AS start_time, '11:00:00' AS end_time UNION ALL
+    SELECT '11:00:00', '12:00:00' UNION ALL
+    SELECT '13:00:00', '14:00:00' UNION ALL
+    SELECT '14:00:00', '15:00:00' UNION ALL
+    SELECT '15:00:00', '16:00:00' UNION ALL
+    SELECT '16:00:00', '17:00:00'
+) t
+JOIN session_types st ON st.name IN ('CALL', 'MEETING')
+WHERE u.email LIKE 'seed.counselor%@rapport.local'
+  AND NOT EXISTS (
+      SELECT 1
+      FROM counselor_schedules cs
+      WHERE cs.counselor_id = u.id
+        AND cs.session_type_id = st.id
+        AND cs.slot_date = d.slot_date
+        AND cs.start_time = t.start_time
+  );
+
+-- 4-2-a) 30분 슬롯 추가 (seed.counselor01~03, CALL 타입)
+INSERT INTO counselor_schedules (
+    counselor_id, session_type_id, slot_date, start_time, end_time, is_available, created_at, updated_at, version
+)
+SELECT u.id, st.id, d.slot_date, t.start_time, t.end_time, 1, NOW(), NOW(), 0
+FROM users u
+JOIN (
+    SELECT CURDATE() + INTERVAL (0 - WEEKDAY(CURDATE())) DAY AS slot_date UNION ALL
+    SELECT CURDATE() + INTERVAL (1 - WEEKDAY(CURDATE())) DAY UNION ALL
+    SELECT CURDATE() + INTERVAL (2 - WEEKDAY(CURDATE())) DAY UNION ALL
+    SELECT CURDATE() + INTERVAL (3 - WEEKDAY(CURDATE())) DAY UNION ALL
+    SELECT CURDATE() + INTERVAL (4 - WEEKDAY(CURDATE())) DAY
+) d
+JOIN (
+    SELECT '09:00:00' AS start_time, '09:30:00' AS end_time UNION ALL
+    SELECT '09:30:00', '10:00:00' UNION ALL
+    SELECT '10:00:00', '10:30:00' UNION ALL
+    SELECT '10:30:00', '11:00:00' UNION ALL
+    SELECT '11:00:00', '11:30:00' UNION ALL
+    SELECT '11:30:00', '12:00:00'
+) t
+JOIN session_types st ON st.name = 'CALL'
+WHERE u.email IN (
+    'seed.counselor01@rapport.local',
+    'seed.counselor02@rapport.local',
+    'seed.counselor03@rapport.local'
+)
+  AND NOT EXISTS (
+      SELECT 1
+      FROM counselor_schedules cs
+      WHERE cs.counselor_id = u.id
+        AND cs.session_type_id = st.id
+        AND cs.slot_date = d.slot_date
+        AND cs.start_time = t.start_time
+        AND cs.end_time = t.end_time
+  );
+
+-- ============================================================
+-- 5) Optional review seed (clients + completed bookings + reviews)
 -- ============================================================
 
 -- 4-1) client users (5)
@@ -257,7 +365,7 @@ SET cp.average_rating = s.avg_rating,
 COMMIT;
 
 -- ============================================================
--- 5) Summary (inserted rows in this run)
+-- 6) Summary (inserted rows in this run)
 -- ============================================================
 SET @after_users = (
     SELECT COUNT(*) FROM users WHERE email LIKE 'seed.counselor%@rapport.local'
@@ -276,9 +384,21 @@ SET @after_reviews = (
     SELECT COUNT(*) FROM reviews
     WHERE content LIKE '[SEED]%'
 );
+SET @after_schedule_settings = (
+    SELECT COUNT(*) FROM counselor_schedule_settings css
+    JOIN users u ON u.id = css.counselor_id
+    WHERE u.email LIKE 'seed.counselor%@rapport.local'
+);
+SET @after_schedules = (
+    SELECT COUNT(*) FROM counselor_schedules cs
+    JOIN users u ON u.id = cs.counselor_id
+    WHERE u.email LIKE 'seed.counselor%@rapport.local'
+);
 
 SELECT
     (@after_users - @before_users)       AS inserted_users,
     (@after_profiles - @before_profiles) AS inserted_profiles,
     (@after_prices - @before_prices)     AS inserted_session_type_prices,
-    (@after_reviews - @before_reviews)   AS inserted_reviews;
+    (@after_reviews - @before_reviews)   AS inserted_reviews,
+    (@after_schedule_settings - @before_schedule_settings) AS inserted_schedule_settings,
+    (@after_schedules - @before_schedules) AS inserted_schedules;
