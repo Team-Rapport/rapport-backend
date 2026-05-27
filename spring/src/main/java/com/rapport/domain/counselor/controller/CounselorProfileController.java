@@ -43,6 +43,9 @@ public class CounselorProfileController {
                description = """
                        수정할 필드만 보내는 부분 수정 API입니다.
                        미전송/NULL 필드는 기존 값을 유지합니다.
+                       symptoms는 주요 증상 태그 목록입니다.
+                       consultationModes는 상담 방식(FACE_TO_FACE/ONLINE)입니다.
+                       licenseType/licenseNumber는 하위호환용 입력만 허용하며 현재 무시됩니다.
                        enum: counselorGender = MALE | FEMALE | ANY
                        """)
     @PatchMapping("/api/v1/counselor/profile")
@@ -59,11 +62,11 @@ public class CounselorProfileController {
                                               "counselorGender": "FEMALE",
                                               "bio": "수면 문제와 불안 완화를 중심으로 일상 회복을 돕습니다.",
                                               "specializations": ["불안", "수면", "공황"],
+                                              "symptoms": ["우울", "불안", "불면", "공황"],
+                                              "consultationModes": ["FACE_TO_FACE", "ONLINE"],
                                               "approaches": ["인지행동치료(CBT)", "호흡/이완 훈련"],
                                               "experienceYears": 7,
-                                              "officeAddress": "서울 강남구 테헤란로 101",
-                                              "licenseType": "상담심리사 1급",
-                                              "licenseNumber": "KCP-1-2026-1001"
+                                              "officeAddress": "서울 강남구 테헤란로 101"
                                             }
                                             """
                             )

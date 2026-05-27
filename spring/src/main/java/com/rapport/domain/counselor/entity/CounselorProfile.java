@@ -42,6 +42,14 @@ public class CounselorProfile {
     @Column(columnDefinition = "json")
     private List<String> approaches;
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "json")
+    private List<String> symptoms;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "consultation_modes", columnDefinition = "json")
+    private List<String> consultationModes;
+
     @Column(columnDefinition = "TEXT")
     private String bio;
 
@@ -99,6 +107,9 @@ public class CounselorProfile {
         profile.counselorGender = gender;
         profile.averageRating = BigDecimal.ZERO;
         profile.specializations = List.of();
+        profile.approaches = List.of();
+        profile.symptoms = List.of();
+        profile.consultationModes = List.of();
         return profile;
     }
 
@@ -123,13 +134,15 @@ public class CounselorProfile {
 
     public void update(String licenseType, String licenseNumber,
                        CounselorGender counselorGender, List<String> specializations,
-                       List<String> approaches, String bio,
+                       List<String> approaches, List<String> symptoms, List<String> consultationModes, String bio,
                        Integer experienceYears, String officeAddress) {
         if (licenseType != null)      this.licenseType = licenseType;
         if (licenseNumber != null)    this.licenseNumber = licenseNumber;
         if (counselorGender != null)  this.counselorGender = counselorGender;
         if (specializations != null)  this.specializations = specializations;
         if (approaches != null)       this.approaches = approaches;
+        if (symptoms != null)         this.symptoms = symptoms;
+        if (consultationModes != null) this.consultationModes = consultationModes;
         if (bio != null)              this.bio = bio;
         if (experienceYears != null)  this.experienceYears = experienceYears;
         if (officeAddress != null)    this.officeAddress = officeAddress;

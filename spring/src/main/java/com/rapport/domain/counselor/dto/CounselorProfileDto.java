@@ -17,12 +17,14 @@ public class CounselorProfileDto {
 
     // 프로필 수정 요청 (상담사 전용 PATCH /api/v1/counselor/profile)
     @Getter
-    @Schema(name = "CounselorProfileUpdateRequest", description = "상담사 프로필 부분 수정 요청. 미전송/NULL 필드는 기존 값 유지")
+    @Schema(name = "CounselorProfileUpdateRequest", description = "상담사 프로필 부분 수정 요청. 미전송/NULL 필드는 기존 값 유지. licenseType/licenseNumber는 하위호환 입력만 허용하며 현재 저장에 사용하지 않습니다.")
     public static class CounselorProfileUpdateRequest {
-        @Schema(description = "자격 종류 (선택)", example = "상담심리사 1급")
+        @Deprecated
+        @Schema(description = "DEPRECATED: 자격 종류. 자격 정보는 /api/v1/counselor/credentials 단계에서 관리합니다. 보내도 무시됩니다.", example = "상담심리사 1급", deprecated = true)
         @Size(max = 100, message = "licenseType은 100자 이하여야 합니다.")
         private String licenseType;
-        @Schema(description = "자격 번호 (선택)", example = "KCP-1-2026-1001")
+        @Deprecated
+        @Schema(description = "DEPRECATED: 자격 번호. 자격 정보는 /api/v1/counselor/credentials 단계에서 관리합니다. 보내도 무시됩니다.", example = "KCP-1-2026-1001", deprecated = true)
         @Size(max = 100, message = "licenseNumber는 100자 이하여야 합니다.")
         private String licenseNumber;
         @Schema(description = "상담사 성별", allowableValues = {"MALE", "FEMALE", "ANY"})
@@ -31,6 +33,10 @@ public class CounselorProfileDto {
         private List<String> specializations;
         @Schema(description = "상담 기법 목록", example = "[\"인지행동치료(CBT)\",\"호흡/이완 훈련\"]")
         private List<String> approaches;
+        @Schema(description = "주요 증상 태그 목록", example = "[\"우울\",\"불안\",\"불면\",\"공황\"]")
+        private List<String> symptoms;
+        @Schema(description = "상담 방식 목록", example = "[\"FACE_TO_FACE\",\"ONLINE\"]")
+        private List<ConsultationMode> consultationModes;
         @Schema(description = "상담사 소개", example = "수면 문제와 불안 완화를 중심으로 일상 회복을 돕습니다.")
         @Size(max = 2000, message = "bio는 2000자 이하여야 합니다.")
         private String bio;
@@ -55,6 +61,8 @@ public class CounselorProfileDto {
         private List<String> specializations;
         @Schema(description = "상담 기법 목록 (전문 분야와 별도)")
         private List<String> approaches;
+        @Schema(description = "주요 증상 태그 목록")
+        private List<String> symptoms;
         @Schema(description = "상담 가능 방식 표준값: FACE_TO_FACE(대면), ONLINE(비대면)")
         private List<ConsultationMode> consultationModes;
         @Schema(description = "최소 상담 가격 (KRW, 1회 기준)")
@@ -80,6 +88,8 @@ public class CounselorProfileDto {
         private CounselorProfile.CounselorGender counselorGender;
         private List<String> specializations;
         private List<String> approaches;
+        private List<String> symptoms;
+        private List<ConsultationMode> consultationModes;
         private String bio;
         private Integer experienceYears;
         private String officeAddress;
@@ -90,7 +100,7 @@ public class CounselorProfileDto {
         private LocalDateTime approvedAt;
         @Schema(description = "상담사 프로필 완성 여부 (온보딩 라우팅용)")
         private boolean profileCompleted;
-        @Schema(description = "완성되지 않은 필수 필드 목록", example = "[\"bio\",\"specializations\"]")
+        @Schema(description = "완성되지 않은 필수 필드 목록", example = "[\"bio\",\"specializations\",\"symptoms\",\"consultationModes\"]")
         private List<String> requiredMissingFields;
     }
 }

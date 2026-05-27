@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class CounselorDto {
 
@@ -26,8 +27,13 @@ public class CounselorDto {
         private Long profileId;
         private String name;
         private String email;
+        @Deprecated
         private String licenseType;
+        @Deprecated
         private String licenseNumber;
+        private boolean credentialsSubmitted;
+        private long credentialCount;
+        private List<String> credentialTypes;
         private CounselorProfile.ApprovalStatus approvalStatus;
         private LocalDateTime appliedAt;
     }
@@ -51,8 +57,13 @@ public class CounselorDto {
         private Long profileId;
         private String name;
         private String email;
+        @Deprecated
         private String licenseType;
+        @Deprecated
         private String licenseNumber;
+        private boolean credentialsSubmitted;
+        private long credentialCount;
+        private List<String> credentialTypes;
         private CounselorProfile.ApprovalStatus approvalStatus;
         private String rejectionReason;
         private boolean isActive;

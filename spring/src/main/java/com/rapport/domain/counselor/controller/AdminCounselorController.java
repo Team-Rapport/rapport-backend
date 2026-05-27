@@ -29,7 +29,7 @@ public class AdminCounselorController {
     private final CounselorApprovalService counselorApprovalService;
 
     @Operation(summary = "상담사 전체 목록 조회",
-               description = "status 필터(PENDING/APPROVED/REJECTED) 또는 전체 조회. 최신 신청순 정렬.")
+               description = "status 필터(PENDING/APPROVED/REJECTED) 또는 전체 조회. 최신 신청순 정렬. 자격 제출 상태는 credentialsSubmitted/credentialCount/credentialTypes로 확인합니다.")
     @GetMapping
     public ResponseEntity<ApiResponse<Page<CounselorDto.AdminCounselorResponse>>> getAllCounselors(
             @Parameter(description = "승인 상태 필터 (생략 시 전체)")
@@ -40,7 +40,7 @@ public class AdminCounselorController {
                 ApiResponse.ok(counselorApprovalService.getAllCounselors(status, pageable)));
     }
 
-    @Operation(summary = "심사 대기 목록 조회", description = "PENDING 상태의 상담사 목록을 페이지로 조회합니다.")
+    @Operation(summary = "심사 대기 목록 조회", description = "PENDING 상태의 상담사 목록을 페이지로 조회합니다. 자격 제출 상태는 credentialsSubmitted/credentialCount/credentialTypes로 확인합니다.")
     @GetMapping("/pending")
     public ResponseEntity<ApiResponse<Page<CounselorDto.PendingCounselorResponse>>> getPendingCounselors(
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.ASC)

@@ -9,6 +9,7 @@ import com.rapport.global.exception.ErrorCode;
 import com.rapport.global.util.S3Service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,6 +24,8 @@ public class CounselorCredentialService {
     private final CounselorCredentialRepository credentialRepository;
     private final UserRepository userRepository;
     private final S3Service s3Service;
+    @Value("${app.mock-credential-upload-enabled:false}")
+    private boolean mockCredentialUploadEnabled;
 
     // ===== 상담사: 서류 업로드 =====
 
@@ -33,8 +36,18 @@ public class CounselorCredentialService {
         User counselor = userRepository.findById(counselorId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        // S3에 업로드 (folder: credentials/{userId}/)
-        String fileUrl = s3Service.upload(file, "credentials/" + counselorId);
+        String fileUrl;
+        try {
+            // S3에 업로드 (folder: credentials/{userId}/)
+            fileUrl = s3Service.upload(file, "credentials/" + counselorId);
+        } catch (Exception e) {
+            if (!mockCredentialUploadEnabled) {
+                throw e;
+            }
+            fileUrl = buildMockFileUrl(counselorId, type, file);
+            log.warn("S3 upload failed. Using mock credential url. counselorId={}, type={}, reason={}",
+                    counselorId, type, e.getMessage());
+        }
 
         CounselorCredential credential = CounselorCredential.create(counselor, type, fileUrl);
         credentialRepository.save(credential);
@@ -78,4 +91,9 @@ public class CounselorCredentialService {
             String viewUrl,   // 10분짜리 임시 열람 URL
             java.time.LocalDateTime uploadedAt
     ) {}
+
+    private String buildMockFileUrl(Long counselorId, CounselorCredential.CredentialType type, MultipartFile file) {
+        String originalName = file.getOriginalFilename() == null ? "file" : file.getOriginalFilename();
+        return "mock://credentials/" + counselorId + "/" + type.name() + "/" + System.currentTimeMillis() + "_" + originalName;
+    }
 }

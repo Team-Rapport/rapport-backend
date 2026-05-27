@@ -18,16 +18,26 @@ public interface CounselorProfileRepository
 
     Optional<CounselorProfile> findByUserId(Long userId);
     boolean existsByUserId(Long userId);
+    @Query("""
+           SELECT cp FROM CounselorProfile cp
+           JOIN FETCH cp.user u
+           WHERE cp.approvalStatus = :status
+             AND u.deletedAt IS NULL
+           """)
     Page<CounselorProfile> findAllByApprovalStatus(
-            CounselorProfile.ApprovalStatus status, Pageable pageable);
+            @Param("status") CounselorProfile.ApprovalStatus status, Pageable pageable);
 
     @Query("SELECT cp FROM CounselorProfile cp " +
            "WHERE cp.approvalStatus = 'PENDING' ORDER BY cp.createdAt ASC")
     List<CounselorProfile> findAllPendingOrderByCreatedAt();
 
     // 관리자: 상태별 필터 (null이면 전체 조회)
-    @Query("SELECT cp FROM CounselorProfile cp " +
-           "WHERE (:status IS NULL OR cp.approvalStatus = :status)")
+    @Query("""
+           SELECT cp FROM CounselorProfile cp
+           JOIN FETCH cp.user u
+           WHERE u.deletedAt IS NULL
+             AND (:status IS NULL OR cp.approvalStatus = :status)
+           """)
     Page<CounselorProfile> findAllByOptionalStatus(
             @Param("status") CounselorProfile.ApprovalStatus status, Pageable pageable);
 

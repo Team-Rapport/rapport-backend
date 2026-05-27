@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +36,11 @@ public class CounselorProfileService {
         CounselorProfile profile = findByUserIdOrThrow(userId);
         User user = profile.getUser();
         List<String> missingFields = getRequiredMissingFields(profile);
+        List<CounselorProfileDto.ConsultationMode> consultationModes = resolveConsultationModes(
+                profile.getConsultationModes(),
+                profile.getApproaches(),
+                getConsultationModeMap(List.of(userId)).getOrDefault(userId, List.of())
+        );
         return CounselorProfileDto.MyProfileResponse.builder()
                 .userId(user.getId())
                 .name(user.getName())
@@ -43,8 +49,10 @@ public class CounselorProfileService {
                 .licenseType(profile.getLicenseType())
                 .licenseNumber(profile.getLicenseNumber())
                 .counselorGender(profile.getCounselorGender())
-                .specializations(profile.getSpecializations())
-                .approaches(profile.getApproaches())
+                .specializations(defaultList(profile.getSpecializations()))
+                .approaches(filterApproaches(defaultList(profile.getApproaches())))
+                .symptoms(defaultList(profile.getSymptoms()))
+                .consultationModes(consultationModes)
                 .bio(profile.getBio())
                 .experienceYears(profile.getExperienceYears())
                 .officeAddress(profile.getOfficeAddress())
@@ -63,12 +71,17 @@ public class CounselorProfileService {
     public CounselorProfileDto.MyProfileResponse updateMyProfile(Long userId,
             CounselorProfileDto.CounselorProfileUpdateRequest request) {
         CounselorProfile profile = findByUserIdOrThrow(userId);
+        if (request.getLicenseType() != null || request.getLicenseNumber() != null) {
+            log.info("Ignored license fields in counselor profile patch: userId={}", userId);
+        }
         profile.update(
-                request.getLicenseType(),
-                request.getLicenseNumber(),
+                null,
+                null,
                 request.getCounselorGender(),
                 request.getSpecializations(),
-                request.getApproaches(),
+                filterApproaches(defaultList(request.getApproaches())),
+                request.getSymptoms(),
+                toConsultationModeStrings(request.getConsultationModes()),
                 request.getBio(),
                 request.getExperienceYears(),
                 request.getOfficeAddress()
@@ -117,9 +130,14 @@ public class CounselorProfileService {
                 .profileImageUrl(profile.getUser().getProfileImageUrl())
                 .licenseType(profile.getLicenseType())
                 .counselorGender(profile.getCounselorGender())
-                .specializations(profile.getSpecializations())
-                .approaches(profile.getApproaches())
-                .consultationModes(modeMap.getOrDefault(counselorId, List.of()))
+                .specializations(defaultList(profile.getSpecializations()))
+                .approaches(filterApproaches(defaultList(profile.getApproaches())))
+                .symptoms(defaultList(profile.getSymptoms()))
+                .consultationModes(resolveConsultationModes(
+                        profile.getConsultationModes(),
+                        profile.getApproaches(),
+                        modeMap.getOrDefault(counselorId, List.of())
+                ))
                 .minPrice(minPriceMap.get(counselorId))
                 .bio(profile.getBio())
                 .experienceYears(profile.getExperienceYears())
@@ -169,9 +187,76 @@ public class CounselorProfileService {
         if (profile.getCounselorGender() == null) missing.add("counselorGender");
         if (profile.getBio() == null || profile.getBio().isBlank()) missing.add("bio");
         if (profile.getSpecializations() == null || profile.getSpecializations().isEmpty()) missing.add("specializations");
-        if (profile.getApproaches() == null || profile.getApproaches().isEmpty()) missing.add("approaches");
+        if (profile.getSymptoms() == null || profile.getSymptoms().isEmpty()) missing.add("symptoms");
+        if (resolveConsultationModes(profile.getConsultationModes(), profile.getApproaches(), List.of()).isEmpty()) {
+            missing.add("consultationModes");
+        }
+        if (filterApproaches(defaultList(profile.getApproaches())).isEmpty()) missing.add("approaches");
         if (profile.getExperienceYears() == null) missing.add("experienceYears");
         if (profile.getOfficeAddress() == null || profile.getOfficeAddress().isBlank()) missing.add("officeAddress");
         return missing;
+    }
+
+    private List<String> defaultList(List<String> values) {
+        return values == null ? List.of() : values;
+    }
+
+    private List<String> filterApproaches(List<String> approaches) {
+        if (approaches == null || approaches.isEmpty()) return List.of();
+        return approaches.stream()
+                .filter(v -> !isLegacyConsultationValue(v))
+                .toList();
+    }
+
+    private boolean isLegacyConsultationValue(String value) {
+        if (value == null) return false;
+        return switch (value.trim().toUpperCase()) {
+            case "MEETING", "CALL", "CHAT", "VIDEOCALL", "FACE_TO_FACE", "ONLINE" -> true;
+            default -> false;
+        };
+    }
+
+    private List<String> toConsultationModeStrings(List<CounselorProfileDto.ConsultationMode> modes) {
+        if (modes == null) return null;
+        return modes.stream().map(Enum::name).toList();
+    }
+
+    private List<CounselorProfileDto.ConsultationMode> resolveConsultationModes(
+            List<String> profileModes,
+            List<String> approaches,
+            List<CounselorProfileDto.ConsultationMode> fallbackFromSessionTypes
+    ) {
+        EnumSet<CounselorProfileDto.ConsultationMode> result = EnumSet.noneOf(CounselorProfileDto.ConsultationMode.class);
+
+        if (profileModes != null) {
+            for (String mode : profileModes) {
+                try {
+                    result.add(CounselorProfileDto.ConsultationMode.valueOf(mode));
+                } catch (Exception ignored) {
+                }
+            }
+        }
+
+        if (approaches != null) {
+            for (String value : approaches) {
+                CounselorProfileDto.ConsultationMode mapped = mapLegacyConsultationMode(value);
+                if (mapped != null) result.add(mapped);
+            }
+        }
+
+        if (result.isEmpty() && fallbackFromSessionTypes != null) {
+            result.addAll(fallbackFromSessionTypes);
+        }
+
+        return result.isEmpty() ? List.of() : List.copyOf(result);
+    }
+
+    private CounselorProfileDto.ConsultationMode mapLegacyConsultationMode(String value) {
+        if (value == null) return null;
+        return switch (value.trim().toUpperCase()) {
+            case "MEETING", "FACE_TO_FACE" -> CounselorProfileDto.ConsultationMode.FACE_TO_FACE;
+            case "CALL", "CHAT", "VIDEOCALL", "ONLINE" -> CounselorProfileDto.ConsultationMode.ONLINE;
+            default -> null;
+        };
     }
 }

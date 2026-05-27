@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,7 +39,7 @@ public class CounselorSearchService {
         StringBuilder sql = new StringBuilder("""
                 SELECT DISTINCT
                     cp.id, cp.user_id, cp.license_type, cp.counselor_gender,
-                    cp.specializations, cp.approaches, cp.bio, cp.experience_years,
+                    cp.specializations, cp.approaches, cp.symptoms, cp.consultation_modes, cp.bio, cp.experience_years,
                     cp.average_rating, cp.review_count, cp.approval_status, cp.approved_at,
                     u.name, u.email, u.profile_image_url,
                     cp.created_at
@@ -120,16 +121,21 @@ public class CounselorSearchService {
                     .licenseType((String) row[2])
                     .counselorGender(CounselorProfile.CounselorGender.valueOf((String) row[3]))
                     .specializations(parseJsonArray(row[4]))
-                    .approaches(parseJsonArray(row[5]))
-                    .consultationModes(modeMap.getOrDefault(counselorId, List.of()))
+                    .approaches(filterApproaches(parseJsonArray(row[5])))
+                    .symptoms(parseJsonArray(row[6]))
+                    .consultationModes(resolveConsultationModes(
+                            parseJsonArray(row[7]),
+                            parseJsonArray(row[5]),
+                            modeMap.getOrDefault(counselorId, List.of())
+                    ))
                     .minPrice(minPriceMap.get(counselorId))
-                    .bio((String) row[6])
-                    .experienceYears(row[7] != null ? ((Number) row[7]).intValue() : null)
-                    .averageRating(row[8] != null ? new BigDecimal(row[8].toString()) : null)
-                    .reviewCount(row[9] != null ? ((Number) row[9]).intValue() : 0)
-                    .approvalStatus(CounselorProfile.ApprovalStatus.valueOf((String) row[10]))
-                    .name((String) row[12])
-                    .profileImageUrl((String) row[14])
+                    .bio((String) row[8])
+                    .experienceYears(row[9] != null ? ((Number) row[9]).intValue() : null)
+                    .averageRating(row[10] != null ? new BigDecimal(row[10].toString()) : null)
+                    .reviewCount(row[11] != null ? ((Number) row[11]).intValue() : 0)
+                    .approvalStatus(CounselorProfile.ApprovalStatus.valueOf((String) row[12]))
+                    .name((String) row[14])
+                    .profileImageUrl((String) row[16])
                     .build();
         }).toList();
     }
@@ -174,5 +180,59 @@ public class CounselorSearchService {
         } catch (Exception e) {
             return List.of();
         }
+    }
+
+    private List<String> filterApproaches(List<String> approaches) {
+        if (approaches == null || approaches.isEmpty()) return List.of();
+        return approaches.stream()
+                .filter(v -> !isLegacyConsultationValue(v))
+                .toList();
+    }
+
+    private boolean isLegacyConsultationValue(String value) {
+        if (value == null) return false;
+        return switch (value.trim().toUpperCase()) {
+            case "MEETING", "CALL", "CHAT", "VIDEOCALL", "FACE_TO_FACE", "ONLINE" -> true;
+            default -> false;
+        };
+    }
+
+    private List<CounselorProfileDto.ConsultationMode> resolveConsultationModes(
+            List<String> profileModes,
+            List<String> approaches,
+            List<CounselorProfileDto.ConsultationMode> fallbackFromSessionTypes
+    ) {
+        EnumSet<CounselorProfileDto.ConsultationMode> result = EnumSet.noneOf(CounselorProfileDto.ConsultationMode.class);
+
+        if (profileModes != null) {
+            for (String mode : profileModes) {
+                try {
+                    result.add(CounselorProfileDto.ConsultationMode.valueOf(mode));
+                } catch (Exception ignored) {
+                }
+            }
+        }
+
+        if (approaches != null) {
+            for (String value : approaches) {
+                CounselorProfileDto.ConsultationMode mapped = mapLegacyConsultationMode(value);
+                if (mapped != null) result.add(mapped);
+            }
+        }
+
+        if (result.isEmpty() && fallbackFromSessionTypes != null) {
+            result.addAll(fallbackFromSessionTypes);
+        }
+
+        return result.isEmpty() ? List.of() : List.copyOf(result);
+    }
+
+    private CounselorProfileDto.ConsultationMode mapLegacyConsultationMode(String value) {
+        if (value == null) return null;
+        return switch (value.trim().toUpperCase()) {
+            case "MEETING", "FACE_TO_FACE" -> CounselorProfileDto.ConsultationMode.FACE_TO_FACE;
+            case "CALL", "CHAT", "VIDEOCALL", "ONLINE" -> CounselorProfileDto.ConsultationMode.ONLINE;
+            default -> null;
+        };
     }
 }

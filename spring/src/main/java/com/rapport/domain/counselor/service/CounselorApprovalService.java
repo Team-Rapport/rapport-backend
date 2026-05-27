@@ -1,6 +1,8 @@
 package com.rapport.domain.counselor.service;
 
 import com.rapport.domain.counselor.dto.CounselorDto;
+import com.rapport.domain.counselor.entity.CounselorCredential;
+import com.rapport.domain.counselor.entity.CounselorCredentialRepository;
 import com.rapport.domain.counselor.entity.CounselorProfile;
 import com.rapport.domain.counselor.entity.CounselorProfileRepository;
 import com.rapport.domain.user.entity.User;
@@ -23,6 +25,7 @@ import java.util.List;
 public class CounselorApprovalService {
 
     private final CounselorProfileRepository counselorProfileRepository;
+    private final CounselorCredentialRepository counselorCredentialRepository;
     private final EmailService emailService;
 
     // ===== 심사 대기 목록 조회 =====
@@ -97,6 +100,7 @@ public class CounselorApprovalService {
     }
 
     private CounselorDto.PendingCounselorResponse toPendingResponse(CounselorProfile profile) {
+        CredentialSummary summary = getCredentialSummary(profile.getUser().getId());
         return CounselorDto.PendingCounselorResponse.builder()
                 .userId(profile.getUser().getId())
                 .profileId(profile.getId())
@@ -104,6 +108,9 @@ public class CounselorApprovalService {
                 .email(profile.getUser().getEmail())
                 .licenseType(profile.getLicenseType())
                 .licenseNumber(profile.getLicenseNumber())
+                .credentialsSubmitted(summary.submitted())
+                .credentialCount(summary.count())
+                .credentialTypes(summary.types())
                 .approvalStatus(profile.getApprovalStatus())
                 .appliedAt(profile.getCreatedAt())
                 .build();
@@ -127,6 +134,7 @@ public class CounselorApprovalService {
     }
 
     private CounselorDto.AdminCounselorResponse toAdminCounselorResponse(CounselorProfile profile) {
+        CredentialSummary summary = getCredentialSummary(profile.getUser().getId());
         return CounselorDto.AdminCounselorResponse.builder()
                 .userId(profile.getUser().getId())
                 .profileId(profile.getId())
@@ -134,11 +142,26 @@ public class CounselorApprovalService {
                 .email(profile.getUser().getEmail())
                 .licenseType(profile.getLicenseType())
                 .licenseNumber(profile.getLicenseNumber())
+                .credentialsSubmitted(summary.submitted())
+                .credentialCount(summary.count())
+                .credentialTypes(summary.types())
                 .approvalStatus(profile.getApprovalStatus())
                 .rejectionReason(profile.getRejectionReason())
                 .isActive(profile.getUser().isActive())
                 .appliedAt(profile.getCreatedAt())
                 .approvedAt(profile.getApprovedAt())
                 .build();
+    }
+
+    private CredentialSummary getCredentialSummary(Long counselorId) {
+        long count = counselorCredentialRepository.countByCounselorId(counselorId);
+        List<String> types = counselorCredentialRepository.findDistinctTypesByCounselorId(counselorId)
+                .stream()
+                .map(CounselorCredential.CredentialType::name)
+                .toList();
+        return new CredentialSummary(count > 0, count, types);
+    }
+
+    private record CredentialSummary(boolean submitted, long count, List<String> types) {
     }
 }
