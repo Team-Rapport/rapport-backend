@@ -6,6 +6,7 @@ import com.rapport.domain.auth.entity.RefreshTokenRepository;
 import com.rapport.domain.chat.entity.AiChatSession;
 import com.rapport.domain.chat.entity.AiChatSessionRepository;
 import com.rapport.domain.counselor.entity.CounselorProfile;
+import com.rapport.domain.counselor.entity.CounselorCredentialRepository;
 import com.rapport.domain.counselor.entity.CounselorProfileRepository;
 import com.rapport.domain.user.entity.User;
 import com.rapport.domain.user.entity.UserRepository;
@@ -29,6 +30,7 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final CounselorProfileRepository counselorProfileRepository;
+    private final CounselorCredentialRepository counselorCredentialRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final AiChatSessionRepository aiChatSessionRepository;
     private final JwtTokenProvider jwtTokenProvider;
@@ -194,6 +196,12 @@ public class AuthService {
                         user.getId(), AiChatSession.SessionStatus.COMPLETED);
 
         boolean isNewUser = user.getRole() == User.Role.CLIENT && !profileCompleted;
+        CounselorProfile counselorProfile = null;
+        boolean credentialsSubmitted = false;
+        if (user.getRole() == User.Role.COUNSELOR) {
+            counselorProfile = counselorProfileRepository.findByUserId(user.getId()).orElse(null);
+            credentialsSubmitted = counselorCredentialRepository.existsByCounselorId(user.getId());
+        }
 
         return AuthDto.UserInfo.builder()
                 .id(user.getId())
@@ -204,6 +212,8 @@ public class AuthService {
                 .isNewUser(isNewUser)
                 .profileCompleted(profileCompleted)
                 .onboardingCompleted(onboardingCompleted)
+                .approvalStatus(counselorProfile != null ? counselorProfile.getApprovalStatus().name() : null)
+                .credentialsSubmitted(credentialsSubmitted)
                 .build();
     }
 

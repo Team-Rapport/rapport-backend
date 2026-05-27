@@ -2,6 +2,7 @@ package com.rapport.domain.auth.dto;
 
 import jakarta.validation.constraints.*;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -58,15 +59,31 @@ public class AuthDto {
     @Getter
     @Builder
     public static class UserInfo {
+        @Schema(example = "28")
         private Long id;
+        @Schema(example = "counselor@test.com")
         private String email;
+        @Schema(example = "이라포")
         private String name;
+        @Schema(description = "사용자 역할", example = "COUNSELOR")
         private String role;
         private String profileImageUrl;
         @JsonProperty("isNewUser")
+        @Schema(description = "신규 사용자 여부 (현재 CLIENT 기준)", example = "false")
         private boolean isNewUser;
+        @Schema(description = "기본 프로필 완성 여부", example = "false")
         private boolean profileCompleted;
+        @Schema(description = "온보딩 완료 여부", example = "true")
         private boolean onboardingCompleted;
+        // COUNSELOR 전용 상태값 (CLIENT는 null/false)
+        @Schema(
+            description = "상담사 심사 상태 (COUNSELOR 전용, CLIENT는 null)",
+            allowableValues = {"PENDING", "APPROVED", "REJECTED"},
+            example = "PENDING"
+        )
+        private String approvalStatus;
+        @Schema(description = "자격 증빙 제출 여부 (COUNSELOR 전용)", example = "false")
+        private boolean credentialsSubmitted;
     }
 
     @Getter

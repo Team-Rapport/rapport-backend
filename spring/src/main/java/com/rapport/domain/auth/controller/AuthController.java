@@ -88,7 +88,20 @@ public class AuthController {
     /**
      * 현재 로그인 사용자 정보 확인
      */
-    @Operation(summary = "내 정보 조회", security = @SecurityRequirement(name = "bearerAuth"))
+    @Operation(
+            summary = "내 정보 조회",
+            description = "로그인 사용자 정보를 반환합니다. COUNSELOR는 approvalStatus/credentialsSubmitted 필드를 함께 반환합니다.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "조회 성공",
+                    content = @Content(examples = @ExampleObject(value = """
+                            {"success":true,"data":{"id":28,"email":"counselor@test.com","name":"이라포","role":"COUNSELOR","profileImageUrl":null,"isNewUser":false,"profileCompleted":false,"onboardingCompleted":true,"approvalStatus":"PENDING","credentialsSubmitted":false}}
+                            """))
+            )
+    })
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<AuthDto.UserInfo>> getMe(
             @AuthenticationPrincipal UserPrincipal principal) {
@@ -96,7 +109,16 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.ok(userInfo));
     }
 
-    @Operation(summary = "이메일 로그인 (상담사)")
+    @Operation(summary = "이메일 로그인 (상담사)", description = "토큰과 사용자 정보를 반환합니다. 사용자 정보에 상담사 상태 필드가 포함됩니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "로그인 성공",
+                    content = @Content(examples = @ExampleObject(value = """
+                            {"success":true,"message":"로그인 성공","data":{"accessToken":"...","refreshToken":"...","tokenType":"Bearer","expiresIn":604800,"user":{"id":28,"email":"counselor@test.com","name":"이라포","role":"COUNSELOR","profileImageUrl":null,"isNewUser":false,"profileCompleted":false,"onboardingCompleted":true,"approvalStatus":"PENDING","credentialsSubmitted":false}}}
+                            """))
+            )
+    })
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthDto.TokenResponse>> login(
             @Valid @RequestBody AuthDto.LoginRequest request) {
