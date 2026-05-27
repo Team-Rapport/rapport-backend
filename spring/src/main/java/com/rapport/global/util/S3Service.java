@@ -81,6 +81,9 @@ public class S3Service {
      * @param minutes   유효 시간 (분)
      */
     public String generatePresignedUrl(String fileUrl, int minutes) {
+        if (fileUrl == null || fileUrl.startsWith("mock://")) {
+            return fileUrl;
+        }
         String key = extractKeyFromUrl(fileUrl);
         java.util.Date expiration = new java.util.Date(
                 System.currentTimeMillis() + (long) minutes * 60 * 1000);

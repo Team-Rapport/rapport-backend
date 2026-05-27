@@ -17,6 +17,7 @@ import com.rapport.global.exception.BusinessException;
 import com.rapport.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +34,8 @@ public class IntakeFormService {
     private final ChatMessageRepository   chatMessageRepository;
     private final NotificationService     notificationService;
     private final ObjectMapper            objectMapper;
+    @Value("${app.frontend-origin}")
+    private String frontendOrigin;
 
     // ── 1. 상담사 → 접수면접지 요청 발송 ──────────────────────────────
 
@@ -51,10 +54,11 @@ public class IntakeFormService {
                 .orElseGet(() -> chatRoomRepository.save(
                         ChatRoom.create(booking.getClient(), booking.getCounselor(), bookingId)));
 
+        String intakeFormUrl = frontendOrigin + "/intake-form/" + bookingId;
         chatMessageRepository.save(ChatMessage.create(
                 chatRoom,
                 booking.getCounselor(),
-                "접수면접지 작성을 요청드립니다. 아래 링크를 통해 작성해주세요.",
+                "접수면접지 작성을 요청드립니다. " + intakeFormUrl,
                 ChatMessage.MessageType.TEXT));
 
         notificationService.notifyIntakeFormRequested(
