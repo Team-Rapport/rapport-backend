@@ -4,6 +4,8 @@ import com.rapport.domain.auth.dto.AuthDto;
 import com.rapport.domain.auth.entity.RefreshTokenRepository;
 import com.rapport.domain.chat.entity.AiChatSession;
 import com.rapport.domain.chat.entity.AiChatSessionRepository;
+import com.rapport.domain.counselor.entity.CounselorCredentialRepository;
+import com.rapport.domain.counselor.entity.CounselorProfile;
 import com.rapport.domain.counselor.entity.CounselorProfileRepository;
 import com.rapport.domain.user.entity.User;
 import com.rapport.domain.user.entity.UserRepository;
@@ -30,6 +32,8 @@ class AuthServiceTest {
     private UserRepository userRepository;
     @Mock
     private CounselorProfileRepository counselorProfileRepository;
+    @Mock
+    private CounselorCredentialRepository counselorCredentialRepository;
     @Mock
     private RefreshTokenRepository refreshTokenRepository;
     @Mock
@@ -60,5 +64,24 @@ class AuthServiceTest {
         assertThat(me.isProfileCompleted()).isTrue();
         assertThat(me.isOnboardingCompleted()).isTrue();
         assertThat(me.isNewUser()).isFalse();
+    }
+
+    @Test
+    @DisplayName("getMe - COUNSELOR 상태값(approvalStatus, credentialsSubmitted) 반영")
+    void getMe_reflectsCounselorStatusFields() {
+        User user = User.createCounselorUser("counselor@test.com", "encoded", "상담사");
+        ReflectionTestUtils.setField(user, "id", 28L);
+
+        CounselorProfile profile = CounselorProfile.create(
+                user, "UNSPECIFIED", null, CounselorProfile.CounselorGender.ANY);
+
+        when(userRepository.findById(28L)).thenReturn(Optional.of(user));
+        when(counselorProfileRepository.findByUserId(28L)).thenReturn(Optional.of(profile));
+        when(counselorCredentialRepository.existsByCounselorId(28L)).thenReturn(false);
+
+        AuthDto.UserInfo me = authService.getMe(28L);
+
+        assertThat(me.getApprovalStatus()).isEqualTo("PENDING");
+        assertThat(me.isCredentialsSubmitted()).isFalse();
     }
 }
