@@ -6,6 +6,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CounselorSessionTypeRepository extends JpaRepository<CounselorSessionType, Long> {
@@ -40,4 +41,6 @@ public interface CounselorSessionTypeRepository extends JpaRepository<CounselorS
     List<Object[]> findSessionTypeNamesByCounselorIds(@Param("counselorIds") List<Long> counselorIds);
 
     boolean existsByCounselorIdAndSessionTypeId(Long counselorId, Long sessionTypeId);
+    Optional<CounselorSessionType> findByIdAndCounselorId(Long id, Long counselorId);
+    Optional<CounselorSessionType> findByCounselorIdAndSessionTypeId(Long counselorId, Long sessionTypeId);
 }
