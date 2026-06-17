@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>상담사 심사 승인 안내</title>
+  <style>
+    body { margin: 0; padding: 0; background-color: #f5f5f5; font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; }
+    .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 40px 32px; text-align: center; }
+    .header h1 { color: #ffffff; font-size: 24px; margin: 0; letter-spacing: -0.5px; }
+    .header p { color: rgba(255,255,255,0.85); margin: 8px 0 0; font-size: 14px; }
+    .body { padding: 40px 32px; }
+    .greeting { font-size: 18px; font-weight: 600; color: #1f2937; margin-bottom: 16px; }
+    .message { font-size: 15px; color: #4b5563; line-height: 1.7; margin-bottom: 24px; }
+    .highlight-box { background: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 0 8px 8px 0; padding: 16px 20px; margin-bottom: 28px; }
+    .highlight-box p { margin: 0; color: #166534; font-size: 14px; line-height: 1.6; }
+    .cta-button { display: inline-block; background: #6366f1; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
+    .cta-section { text-align: center; margin: 8px 0 32px; }
+    .footer { background: #f9fafb; padding: 24px 32px; border-top: 1px solid #e5e7eb; text-align: center; }
+    .footer p { font-size: 12px; color: #9ca3af; margin: 4px 0; line-height: 1.5; }
+    .badge { display: inline-block; background: #dcfce7; color: #16a34a; padding: 4px 12px; border-radius: 100px; font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>🎉 심사 승인 완료</h1>
+    <p>라포(Rapport) 상담사 심사 결과 안내</p>
+  </div>
+  <div class="body">
+    <div class="badge">✅ 승인 완료</div>
+    <div class="greeting" th:text="|안녕하세요, ${counselorName} 상담사님!|">안녕하세요, 상담사님!</div>
+    <div class="message">
+      라포 상담사 심사가 <strong>승인</strong>되었습니다. 🎊<br/>
+      이제 라포에서 내담자와 연결되어 전문적인 상담 서비스를 제공하실 수 있습니다.
+    </div>
+    <div class="highlight-box">
+      <p>
+        ✔ 상담사 프로필을 작성해 내담자에게 소개해 보세요.<br/>
+        ✔ 상담 가능 일정과 방식별 단가를 설정해 주세요.<br/>
+        ✔ 예약 요청이 들어오면 알림을 보내드립니다.
+      </p>
+    </div>
+    <div class="cta-section">
+      <a class="cta-button" th:href="${profileUrl}" href="#">프로필 작성 시작하기</a>
+    </div>
+    <div class="message" style="font-size:13px; color:#6b7280;">
+      문의 사항이 있으시면 라포 고객센터로 연락해 주세요.<br/>
+      감사합니다.
+    </div>
+  </div>
+  <div class="footer">
+    <p>본 메일은 발신 전용이며 회신되지 않습니다.</p>
+    <p>© 2026 Rapport. All rights reserved.</p>
+  </div>
+</div>
+</body>
+</html>

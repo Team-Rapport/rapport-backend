@@ -38,3 +38,4 @@ fastapi/__pycache__/
 # ───────────────────────────────
 .DS_Store
 Thumbs.db
+spring/src/main/resources/application.yml

@@ -1,0 +1,226 @@
+package com.rapport.domain.auth.service;
+
+import com.rapport.domain.auth.dto.AuthDto;
+import com.rapport.domain.auth.entity.RefreshToken;
+import com.rapport.domain.auth.entity.RefreshTokenRepository;
+import com.rapport.domain.chat.entity.AiChatSession;
+import com.rapport.domain.chat.entity.AiChatSessionRepository;
+import com.rapport.domain.counselor.entity.CounselorProfile;
+import com.rapport.domain.counselor.entity.CounselorCredentialRepository;
+import com.rapport.domain.counselor.entity.CounselorProfileRepository;
+import com.rapport.domain.user.entity.User;
+import com.rapport.domain.user.entity.UserRepository;
+import com.rapport.global.exception.BusinessException;
+import com.rapport.global.exception.ErrorCode;
+import com.rapport.global.util.JwtTokenProvider;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class AuthService {
+    private static final String DEFAULT_PENDING_LICENSE_TYPE = "UNSPECIFIED";
+
+
+    private final UserRepository userRepository;
+    private final CounselorProfileRepository counselorProfileRepository;
+    private final CounselorCredentialRepository counselorCredentialRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final AiChatSessionRepository aiChatSessionRepository;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final PasswordEncoder passwordEncoder;
+    private final EmailVerificationService emailVerificationService;
+
+    // ===== 상담사 회원가입 (이메일/비밀번호) =====
+
+    @Transactional
+    public AuthDto.TokenResponse counselorSignup(AuthDto.CounselorSignupRequest request) {
+        // 이메일 인증 확인
+        emailVerificationService.checkVerified(request.getEmail());
+
+        // 이메일 중복 체크
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new BusinessException(ErrorCode.EMAIL_ALREADY_EXISTS);
+        }
+
+        // User 생성
+        String encodedPassword = passwordEncoder.encode(request.getPassword());
+        User user = User.createCounselorUser(request.getEmail(), encodedPassword, request.getName());
+        user = userRepository.save(user);
+
+        // CounselorProfile 생성 (PENDING 상태)
+        CounselorProfile profile = CounselorProfile.create(
+                user,
+                normalizeLicenseType(request.getLicenseType()),
+                request.getLicenseNumber(),
+                CounselorProfile.CounselorGender.ANY
+        );
+        counselorProfileRepository.save(profile);
+
+        log.info("Counselor signup: userId={}, email={}", user.getId(), user.getEmail());
+        return issueTokens(user);
+    }
+
+    // ===== Refresh Token으로 Access Token 재발급 =====
+
+    @Transactional
+    public AuthDto.TokenResponse refreshTokens(String refreshTokenStr) {
+        // DB에서 Refresh Token 조회
+        RefreshToken refreshToken = refreshTokenRepository.findByToken(refreshTokenStr)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN));
+
+        // 만료 확인
+        if (refreshToken.isExpired()) {
+            refreshTokenRepository.delete(refreshToken);
+            throw new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN);
+        }
+
+        // JWT 검증
+        jwtTokenProvider.validateToken(refreshTokenStr);
+
+        User user = refreshToken.getUser();
+
+        // 기존 Refresh Token 삭제 후 새 토큰 발급 (Rotation)
+        refreshTokenRepository.delete(refreshToken);
+        return issueTokens(user);
+    }
+
+    // ===== 로그아웃 =====
+
+    @Transactional
+    public void logout(Long userId) {
+        refreshTokenRepository.deleteAllByUserId(userId);
+        log.info("User logout: userId={}", userId);
+    }
+
+    // ===== 내부: 토큰 발급 공통 메서드 =====
+
+    @Transactional
+    public AuthDto.TokenResponse issueTokens(User user) {
+        String accessToken = jwtTokenProvider.generateAccessToken(
+                user.getId(), user.getRole().name());
+        String refreshTokenStr = jwtTokenProvider.generateRefreshToken(user.getId());
+
+        long expirationMs = jwtTokenProvider.getRefreshTokenExpirationMs();
+        LocalDateTime expiresAt = LocalDateTime.now().plusSeconds(expirationMs / 1000);
+
+        refreshTokenRepository.deleteAllByUserId(user.getId());
+        refreshTokenRepository.save(RefreshToken.of(user, refreshTokenStr, expiresAt));
+
+        return AuthDto.TokenResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshTokenStr)
+                .tokenType("Bearer")
+                .expiresIn(expirationMs / 1000)
+                .user(toUserInfo(user))
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public AuthDto.UserInfo getMe(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        return toUserInfo(user);
+    }
+
+    @Transactional
+    public AuthDto.TokenResponse login(AuthDto.LoginRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+            throw new BusinessException(ErrorCode.INVALID_PASSWORD);
+        }
+
+        if (!user.isActive()) {
+            throw new BusinessException(ErrorCode.ACCOUNT_DISABLED);
+        }
+
+        user.updateLastLoginAt();
+        return issueTokens(user);
+    }
+
+    // ===== 회원 탈퇴 (소셜/이메일 공통 Soft Delete) =====
+
+    @Transactional
+    public void withdraw(Long userId, String password) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 이메일 계정은 비밀번호 확인
+        if (user.getPasswordHash() != null) {
+            if (password == null || !passwordEncoder.matches(password, user.getPasswordHash())) {
+                throw new BusinessException(ErrorCode.INVALID_PASSWORD);
+            }
+        }
+
+        refreshTokenRepository.deleteAllByUserId(userId);
+        user.anonymize();
+        log.info("User withdrew: userId={}", userId);
+    }
+
+    // ===== 비밀번호 변경 (상담사 전용) =====
+
+    @Transactional
+    public void changePassword(Long userId, AuthDto.ChangePasswordRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        if (user.getPasswordHash() == null) {
+            throw new BusinessException(ErrorCode.OAUTH_USER_NO_PASSWORD);
+        }
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+            throw new BusinessException(ErrorCode.INVALID_PASSWORD);
+        }
+
+        user.changePassword(passwordEncoder.encode(request.getNewPassword()));
+        refreshTokenRepository.deleteAllByUserId(userId);
+        log.info("Password changed: userId={}", userId);
+    }
+
+    private AuthDto.UserInfo toUserInfo(User user) {
+        boolean profileCompleted = user.getGender() != null
+                && user.getBirthDate() != null
+                && user.getPhone() != null
+                && !user.getPhone().isBlank();
+
+        boolean onboardingCompleted = user.getRole() != User.Role.CLIENT
+                || aiChatSessionRepository.existsByClientIdAndStatus(
+                        user.getId(), AiChatSession.SessionStatus.COMPLETED);
+
+        boolean isNewUser = user.getRole() == User.Role.CLIENT && !profileCompleted;
+        CounselorProfile counselorProfile = null;
+        boolean credentialsSubmitted = false;
+        if (user.getRole() == User.Role.COUNSELOR) {
+            counselorProfile = counselorProfileRepository.findByUserId(user.getId()).orElse(null);
+            credentialsSubmitted = counselorCredentialRepository.existsByCounselorId(user.getId());
+        }
+
+        return AuthDto.UserInfo.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .name(user.getName())
+                .role(user.getRole().name())
+                .profileImageUrl(user.getProfileImageUrl())
+                .isNewUser(isNewUser)
+                .profileCompleted(profileCompleted)
+                .onboardingCompleted(onboardingCompleted)
+                .approvalStatus(counselorProfile != null ? counselorProfile.getApprovalStatus().name() : null)
+                .credentialsSubmitted(credentialsSubmitted)
+                .build();
+    }
+
+    private String normalizeLicenseType(String requested) {
+        if (requested == null || requested.isBlank()) {
+            return DEFAULT_PENDING_LICENSE_TYPE;
+        }
+        return requested.trim();
+    }
+}
